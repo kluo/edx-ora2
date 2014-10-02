@@ -401,20 +401,28 @@ describe("OpenAssessment.ResponseView", function() {
 
     it("selects too large of a file", function() {
         spyOn(baseView, 'toggleActionError').andCallThrough();
-        var files = [{type: 'image/jpg', size: 6000000, name: 'huge-picture.jpg', data: ''}];
+        var files = [{type: 'image/jpeg', size: 6000000, name: 'huge-picture.jpg', data: ''}];
         view.prepareUpload(files);
         expect(baseView.toggleActionError).toHaveBeenCalledWith('upload', 'File size must be 5MB or less.');
     });
 
     it("selects the wrong file type", function() {
         spyOn(baseView, 'toggleActionError').andCallThrough();
-        var files = [{type: 'bogus/jpg', size: 1024, name: 'picture.exe', data: ''}];
+        var files = [{type: 'image/jpg', size: 1024, name: 'picture.exe', data: ''}];
         view.prepareUpload(files);
-        expect(baseView.toggleActionError).toHaveBeenCalledWith('upload', 'File must be an image.');
+        expect(baseView.toggleActionError).toHaveBeenCalledWith('upload', 'File must be an image or a PDF.');
     });
 
-    it("uploads a file using a one-time URL", function() {
-        var files = [{type: 'image/jpg', size: 1024, name: 'picture.jpg', data: ''}];
+    it("uploads an image using a one-time URL", function() {
+        var files = [{type: 'image/jpeg', size: 1024, name: 'picture.jpg', data: ''}];
+        view.prepareUpload(files);
+        view.fileUpload();
+        expect(fileUploader.uploadArgs.url).toEqual(FAKE_URL);
+        expect(fileUploader.uploadArgs.data).toEqual(files[0]);
+    });
+    
+    it("uploads a PDF using a one-time URL", function() {
+        var files = [{type: 'application/pdf', size: 1024, name: 'application.pdf', data: ''}];
         view.prepareUpload(files);
         view.fileUpload();
         expect(fileUploader.uploadArgs.url).toEqual(FAKE_URL);
@@ -427,7 +435,7 @@ describe("OpenAssessment.ResponseView", function() {
         spyOn(baseView, 'toggleActionError').andCallThrough();
 
         // Attempt to upload a file
-        var files = [{type: 'image/jpg', size: 1024, name: 'picture.jpg', data: ''}];
+        var files = [{type: 'image/jpeg', size: 1024, name: 'picture.jpg', data: ''}];
         view.prepareUpload(files);
         view.fileUpload();
 
@@ -441,7 +449,7 @@ describe("OpenAssessment.ResponseView", function() {
         spyOn(baseView, 'toggleActionError').andCallThrough();
 
         // Attempt to upload a file
-        var files = [{type: 'image/jpg', size: 1024, name: 'picture.jpg', data: ''}];
+        var files = [{type: 'image/jpeg', size: 1024, name: 'picture.jpg', data: ''}];
         view.prepareUpload(files);
         view.fileUpload();
 
