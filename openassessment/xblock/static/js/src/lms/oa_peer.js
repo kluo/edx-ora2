@@ -197,6 +197,7 @@ OpenAssessment.PeerView.prototype = {
     **/
     peerAssessRequest: function(successFunction) {
         var view = this;
+        var uuid = $('#openassessment__peer-assessment').data('submission-uuid');
         var editedContent = '';
         if (this.trackChanges) {
             editedContent = this.trackChanges.getEditedContent();
@@ -210,6 +211,7 @@ OpenAssessment.PeerView.prototype = {
             this.rubric.optionsSelected(),
             this.rubric.criterionFeedback(),
             this.rubric.overallFeedback(),
+            uuid,
             editedContent
         ).done(
             successFunction
