@@ -34,6 +34,14 @@ OpenAssessment.ResponseView.prototype = {
 
     // Maximum file size (5 MB) for an attached file.
     MAX_FILE_SIZE: 5242880,
+    
+    UPLOADABLE_MIME_TYPES: [
+        'application/pdf',
+        'image/gif',
+        'image/jpeg',
+        'image/pjpeg',
+        'image/png',
+    ],
 
     /**
     Load the response (submission) view.
@@ -446,25 +454,25 @@ OpenAssessment.ResponseView.prototype = {
 
     /**
      When selecting a file for upload, do some quick client-side validation
-     to ensure that it is an image, and is not larger than the maximum file
+     to ensure that it is an image or a PDF, and is not larger than the maximum file
      size.
 
      Args:
         files (list): A collection of files used for upload. This function assumes
             there is only one file being uploaded at any time. This file must
-            be less than 5 MB and an image.
+            be less than 5 MB and an image or PDF.
 
      **/
     prepareUpload: function(files) {
         this.files = null;
-        this.imageType = files[0].type;
+        this.fileType = files[0].type;
         if (files[0].size > this.MAX_FILE_SIZE) {
             this.baseView.toggleActionError(
                 'upload', gettext("File size must be 5MB or less.")
             );
-        } else if (this.imageType.substring(0,6) != 'image/') {
+        } else if (this.UPLOADABLE_MIME_TYPES.indexOf(this.fileType) === -1) {
             this.baseView.toggleActionError(
-                'upload', gettext("File must be an image.")
+                'upload', gettext("File must be an image or a PDF.")
             );
         } else {
             this.baseView.toggleActionError('upload', null);
@@ -494,12 +502,12 @@ OpenAssessment.ResponseView.prototype = {
         // completed, execute a sequential AJAX call to upload to the returned
         // URL. This request requires appropriate CORS configuration for AJAX
         // PUT requests on the server.
-        this.server.getUploadUrl(view.imageType).done(
+        this.server.getUploadUrl(view.fileType).done(
             function(url) {
-                var image = view.files[0];
-                view.fileUploader.upload(url, image)
+                var file = view.files[0];
+                view.fileUploader.upload(url, file)
                     .done(function() {
-                        view.imageUrl();
+                        view.fileUrl();
                         view.baseView.toggleActionError('upload', null);
                     })
                     .fail(handleError);
@@ -510,11 +518,11 @@ OpenAssessment.ResponseView.prototype = {
     /**
      Set the image URL, or retrieve it.
      **/
-    imageUrl: function() {
+    fileUrl: function() {
         var view = this;
-        var image = $('#submission__answer__image', view.element);
+        var file = $('#submission__answer__file', view.element);
         view.server.getDownloadUrl().done(function(url) {
-            image.attr('src', url);
+            file.attr('src', url);
             return url;
         });
     }
