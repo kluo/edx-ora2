@@ -99,15 +99,15 @@
                     </div>
                     <p class="setting-help">{% trans "The date and time when students can no longer submit responses." %}</p>
                 </li>
-                <li id="openassessment_submission_image_wrapper" class="field comp-setting-entry">
+                <li id="openassessment_submission_file_wrapper" class="field comp-setting-entry">
                     <div class="wrapper-comp-setting">
-                        <label for="openassessment_submission_image_editor" class="setting-label">{% trans "Allow Image Responses"%}</label>
-                        <select id="openassessment_submission_image_editor" class="input setting-input" name="image submission">
+                        <label for="openassessment_submission_file_editor" class="setting-label">{% trans "Allow File Responses"%}</label>
+                        <select id="openassessment_submission_file_editor" class="input setting-input" name="file submission">
                             <option value="0">{% trans "False"%}</option>
                             <option value="1" {% if allow_file_upload %} selected="true" {% endif %}>{% trans "True"%}</option>
                         </select>
                     </div>
-                    <p class="setting-help">{% trans "Specify whether students can submit an image file along with their text response." %}</p>
+                    <p class="setting-help">{% trans "Specify whether students can submit a file along with their text response." %}</p>
                 </li>
                 <li id="openassessment_submission_latex_wrapper" class="field comp-setting-entry">
                     <div class="wrapper-comp-setting">
