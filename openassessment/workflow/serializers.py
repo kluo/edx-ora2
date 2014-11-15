@@ -8,6 +8,7 @@ from openassessment.workflow.models import AssessmentWorkflow
 
 class AssessmentWorkflowSerializer(serializers.ModelSerializer):
     score = serializers.Field(source='score')
+    override_score = serializers.Field(source='override_score')
 
     class Meta:
         model = AssessmentWorkflow
@@ -19,6 +20,7 @@ class AssessmentWorkflowSerializer(serializers.ModelSerializer):
             'modified',
 
             # Computed
+            'override_score',
             'score'
         )
 

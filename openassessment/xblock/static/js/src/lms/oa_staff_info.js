@@ -53,12 +53,53 @@ OpenAssessment.StaffInfoView.prototype = {
             function(html) {
                 // Load the HTML and install event handlers
                 $('#openassessment__student-info', view.element).replaceWith(html);
+                view.bindScoreOverrideHandler();
             }
         ).fail(function(errMsg) {
                 view.showLoadError('student_info');
             });
     },
+    
+    /**
+     Upon request, submits an override grade.
+     **/
+    overridePeerScore: function() {
+    	var sel = $('#openassessment__staff-info', this.element);
+    	var studentId = sel.find('#openassessment__student_id').val();
+    	var pointsOverride = sel.find('#openassessment_override_score').val();
+    	var pointsPossible = sel.find('#openassessment_points_possible').text();
+    	this.server.overridePeerScore(studentId, pointsOverride, pointsPossible).done(
+            function(pointsOverride) {
+                $('#openassessment_points_override', this.element).text(pointsOverride);
+            }
+        ).fail(function(errMsg) {
+                $('#openassessment_points_override', this.element).text(errMsg);
+        });
+    },
+    
+    /**
+     Handler for Peer score override.
+     This must be run after loadStudentInfo has completed so that
+     the required HTML elements are present.
+     **/
+    bindScoreOverrideHandler: function() {
+        var sel = $('#openassessment__student-info', this.element);
+        var view = this;
 
+        if (!sel.length) {
+            return;
+        }
+        
+        // Click handler for overriding a student's peer score.
+        sel.find('#submit_override_score').click(
+        	function(eventObject) {
+        		eventObject.preventDefault();
+        		view.overridePeerScore();
+        	}
+        );
+    },
+    
+    
     /**
      Install event handlers for the view.
      **/

@@ -300,6 +300,22 @@ class TestGrade(XBlockHandlerTestCase):
         # Verify that we're on the right template
         self.assertIn(u'not completed', resp.decode('utf-8').lower())
 
+    @scenario('data/grade_incomplete_scenario.xml', user_id='Bunk')
+    def test_grade_score_override(self, xblock):
+        # Graded peers, but haven't completed self assessment
+        self._create_submission_and_assessments(
+            xblock, self.SUBMISSION, [self.PEERS[0]], [self.ASSESSMENTS[0]], None
+        )
+
+        # Create an override score for the submission
+        submission_dict = sub_api.get_submission_and_student(xblock.submission_uuid)
+        student_item = submission_dict['student_item']
+        sub_api.score_override(student_item, '14', '15')
+
+        # Verify that we're on the grade override template
+        resp = self.request(xblock, 'render_grade', json.dumps(dict()))
+        self.assertIn(u'<span class="grade__value__earned">14</span> out of <span class="grade__value__potential">15</span>, set by the instructor.', resp.decode('utf-8').lower())
+
     @scenario('data/grade_scenario.xml', user_id='Greggs')
     def test_submit_feedback(self, xblock):
         # Create submissions and assessments

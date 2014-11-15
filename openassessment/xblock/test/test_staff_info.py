@@ -13,6 +13,7 @@ from openassessment.assessment.errors.ai import AIError, AIGradingInternalError
 from openassessment.fileupload.api import FileUploadInternalError
 from submissions import api as sub_api
 from openassessment.xblock.test.base import scenario, XBlockHandlerTestCase
+from openassessment.xblock.openassessmentblock import OpenAssessmentBlock
 
 ALGORITHM_ID = 'fake'
 
@@ -349,6 +350,53 @@ class TestCourseStaff(XBlockHandlerTestCase):
         resp = xblock.render_student_info(request)
         self.assertIn("bob answer", resp.body.lower())
 
+    @patch('openassessment.assessment.api.peer.get_data_for_override_score')
+    @scenario('data/example_based_assessment.xml', user_id='Bob')
+    def test_staff_debug_student_info_override_no_score(self, xblock, mock_score_data):
+
+        mock_score_data.return_value = {
+            'points_possible': 10,
+        }
+        request = self._setup_override_test(xblock, mock_score_data)
+
+        # Verify that html does not contain Score div
+        resp = xblock.render_student_info(request)
+        self.assertNotIn('<td id="openassessment_points_possible" class="label">10</td>', resp.body)
+
+    @patch('openassessment.assessment.api.peer.get_data_for_override_score')
+    @scenario('data/example_based_assessment.xml', user_id='Bob')
+    def test_staff_debug_student_info_override_score(self, xblock, mock_score_data):
+
+        mock_score_data.return_value = {
+            'points_possible': 10,
+            'points_earned': 7,
+            'points_override': 9,
+        }
+        request = self._setup_override_test(xblock, mock_score_data)
+
+        # Verify that html does contain Score div
+        resp = xblock.render_student_info(request)
+        self.assertIn('<td id="openassessment_points_possible" class="label">10</td>', resp.body)
+        self.assertIn('<td id="openassessment_points_earned" class="label">7</td>', resp.body)
+        self.assertIn('<td id="openassessment_points_override" class="label">9</td>', resp.body)
+
+    @patch.object(OpenAssessmentBlock, 'is_closed')
+    @patch('openassessment.assessment.api.peer.get_data_for_override_score')
+    @scenario('data/example_based_assessment.xml', user_id='Bob')
+    def test_staff_debug_student_info_override_closed(self, xblock, mock_score_data, mock_is_closed):
+
+        mock_score_data.return_value = {
+            'points_possible': 10,
+        }
+        mock_is_closed.return_value = (True, None, None, None)
+        request = self._setup_override_test(xblock, mock_score_data)
+
+        # Verify that html does contain Score div
+        resp = xblock.render_student_info(request)
+        self.assertIn('<td id="openassessment_points_possible" class="label">10</td>', resp.body)
+        self.assertIn('<td id="openassessment_points_earned" class="label"></td>', resp.body)
+        self.assertIn('<td id="openassessment_points_override" class="label"></td>', resp.body)
+
     @scenario('data/example_based_assessment.xml', user_id='Bob')
     def test_display_schedule_training(self, xblock):
         xblock.xmodule_runtime = self._create_mock_runtime(
@@ -491,6 +539,79 @@ class TestCourseStaff(XBlockHandlerTestCase):
         __, context = xblock.get_staff_path_and_context()
         self.assertNotIn('classifierset', context)
 
+    @scenario('data/example_based_assessment.xml', user_id='Bob')
+    def test_peer_score_override(self, xblock):
+
+        # Simulate that we are course staff
+        xblock.xmodule_runtime = self._create_mock_runtime(
+            xblock.scope_ids.usage_id, True, False, 'Bob'
+        )
+
+        bob_item = STUDENT_ITEM.copy()
+        bob_item['item_id'] = xblock.scope_ids.usage_id
+        # Create a submission for Bob, and corresponding workflow.
+        submission = sub_api.create_submission(bob_item, {'text': 'Bob Answer'})
+        peer_api.on_start(submission['uuid'])
+        workflow_api.create_workflow(submission['uuid'], ['peer'])
+
+        # Override score with valid data
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '10',
+            'points_override': '9',
+        }
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"success": true, "points_override": "9"}')
+
+        # Try to override score with invalid "points possible"
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '@',
+            'points_override': '9',
+        }
+
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"msg": "An error was encountered creating the override score.", "success": false}')
+
+        # Try to override score with invalid "override score"
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '10',
+            'points_override': '&',
+        }
+
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"msg": "Please check that you have entered a valid score.", "success": false}')
+
+        # Try to override score with override that is too large
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '10',
+            'points_override': '11',
+        }
+
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"msg": "You have entered a score greater than the maximum possible.", "success": false}')
+
+        # Try to override score with override that is less than zero
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '10',
+            'points_override': '-2',
+        }
+
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"msg": "You have entered a score less than zero.", "success": false}')
+
+        # Override an already overriden score
+        data = {
+            'student_id': 'Bob',
+            'points_possible': '10',
+            'points_override': '8',
+        }
+        resp = self.request(xblock, 'peer_score_override', json.dumps(data))
+        self.assertEquals(resp, '{"success": true, "points_override": "8"}')
+
     def _create_mock_runtime(self, item_id, is_staff, is_admin, anonymous_user_id):
         mock_runtime = Mock(
             course_id='test_course',
@@ -503,3 +624,22 @@ class TestCourseStaff(XBlockHandlerTestCase):
             )
         )
         return mock_runtime
+
+    def _setup_override_test(self, xblock, mock_score_data):
+        
+        # Simulate that we are course staff
+        xblock.xmodule_runtime = self._create_mock_runtime(
+            xblock.scope_ids.usage_id, True, False, 'Bob'
+        )
+
+        bob_item = STUDENT_ITEM.copy()
+        bob_item['item_id'] = xblock.scope_ids.usage_id
+        # Create a submission for Bob, and corresponding workflow.
+        submission = sub_api.create_submission(bob_item, {'text': 'Bob Answer'})
+        peer_api.on_start(submission['uuid'])
+        workflow_api.create_workflow(submission['uuid'], ['peer'])
+
+        # Now Bob should be fully populated in the student info view.
+        request = namedtuple('Request', 'params')
+        request.params = {'student_id': 'Bob'}
+        return request
