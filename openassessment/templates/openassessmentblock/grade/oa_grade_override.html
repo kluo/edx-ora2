@@ -1,0 +1,21 @@
+{% load i18n %}
+{% spaceless %}
+<li id="openassessment__grade" class="openassessment__steps__step step--grade is--complete has--grade">
+    <header class="step__header ui-toggle-visibility__control">
+        <h2 class="step__title">
+            <span class="wrapper--copy">
+                <span class="step__label">{% trans "Your Grade" %}: </span>
+                <span class="grade__value">
+                    <span class="grade__value__title">
+                        {% with override_score_string=score.override_score|stringformat:"s" points_possible_string=score.points_possible|stringformat:"s" %}
+                        {% blocktrans with points_earned='<span class="grade__value__earned">'|safe|add:override_score_string|add:'</span>'|safe points_possible='<span class="grade__value__potential">'|safe|add:points_possible_string|add:'</span>'|safe %}
+                            {{ points_earned }} out of {{ points_possible }}, set by the instructor.
+                        {% endblocktrans %}
+                        {% endwith %}
+                    </span>
+                </span>
+            </span>
+        </h2>
+    </header>
+</li>
+{% endspaceless %}

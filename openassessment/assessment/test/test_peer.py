@@ -1397,6 +1397,61 @@ class TestPeerApi(CacheResetTest):
             REQUIRED_GRADED_BY
         )
 
+    def test_get_data_for_override_no_score(self):
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+
+        scores = peer_api.get_data_for_override_score(submission['uuid'], student_item, RUBRIC_DICT)
+        self.assertEqual(scores, {'points_possible': 14})
+
+    @patch('submissions.api.get_latest_score_for_submission')
+    def test_get_data_for_override_existing_score(self, mock_latest_score):
+        mock_latest_score.return_value = {'points_earned': 1, 'points_possible': 10}
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+
+        scores = peer_api.get_data_for_override_score(submission['uuid'], student_item, RUBRIC_DICT)
+        self.assertEqual(scores, {'points_possible': 10, 'points_earned': 1})
+
+    @patch('submissions.api.get_score_override')
+    def test_get_data_for_override_existing_override(self, mock_score_override):
+        mock_score_override.return_value = {'points_earned': 9}
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+
+        scores = peer_api.get_data_for_override_score(submission['uuid'], student_item, RUBRIC_DICT)
+        self.assertEqual(scores, {'points_possible': 14, 'points_override': 9})
+
+    def test_get_data_for_override_rubric_exception(self):
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+
+        scores = peer_api.get_data_for_override_score(submission['uuid'], student_item, {})
+        self.assertEqual(scores, {'points_possible': None})
+
+    def test_score_override(self):
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+        points_possible = 10
+        points_override = 9
+
+        result = peer_api.score_override(student_item, points_override, points_possible)
+        self.assertEqual(result, {'points_override': 9, 'success': True})
+
+    def test_score_override_no_student(self):
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+        points_possible = 10
+        points_override = 9
+
+        student_item.pop('student_id', None)
+        result = peer_api.score_override(student_item, points_override, points_possible)
+        self.assertEqual(result, {'msg': 'An error was encountered. Please try again.', 'success': False})
+
+    @patch('submissions.api.score_override')
+    def test_score_override_exception(self, mock_score_override):
+        mock_score_override.side_effect = sub_api.SubmissionInternalError
+        submission, student_item = self._create_student_and_submission('Bob', 'Bob\'s answer')
+        points_possible = 10
+        points_override = 9
+
+        result = peer_api.score_override(student_item, points_override, points_possible)
+        self.assertEqual(result, {'msg': 'There was a problem creating the override score.', 'success': False})
+
     @staticmethod
     def _create_student_and_submission(student, answer, date=None):
         new_student_item = STUDENT_ITEM.copy()

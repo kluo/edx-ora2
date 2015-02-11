@@ -138,6 +138,43 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
         },
 
         /**
+         Submit a grade to override the peer assessment grade for this student.
+         
+        Args:
+            student_id (string): The id of the student.
+            points_override (string): The points input by the instructor to override the peer grade.
+            points_possible (string): The max points possible for the submission.
+
+        Returns:
+            A JQuery promise, which resolves with the HTML of the rendered XBlock
+            and fails with an error message.
+         **/
+        overridePeerScore: function(studentId, pointsOverride, pointsPossible) {
+            var url = this.url('peer_score_override');
+            return $.Deferred(function(defer) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        student_id: studentId,
+                        points_override: pointsOverride,
+                        points_possible: pointsPossible
+                    }),
+                }).done(
+                    function(data) {
+                        if (data.success) {
+                            defer.resolveWith(this, [data.points_override]);
+                        } else {
+                            defer.rejectWith(this, [data.msg]);
+                        }
+                    }
+                ).fail(function(data) {
+                    defer.rejectWith(this, [gettext('There was a problem saving the override score.')]);
+                });
+            });
+        },
+
+        /**
         Send a submission to the XBlock.
 
         Args:

@@ -132,5 +132,22 @@
 
     }
   }
+  
+  .staff-info__student {
+    #openassessment_override_score {
+      width: 220px;
+    }
+    #submit_override_score {
+      height: 36px;
+      border-radius: 0;
+      padding: 6px 40px 14px 40px;
+      text-align: center;
+      margin: 0;
+  	  
+      .copy {
+        margin-right: 0;
+      }
+    }
+  }
 
 }
