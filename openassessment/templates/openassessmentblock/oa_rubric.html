@@ -44,7 +44,7 @@
                                 class="answer__value"
                                 value="{{ criterion.name }}"
                                 name="{{ criterion.name }}"
-                                maxlength="300"
+                                maxlength="25000"
                                 {% if criterion.feedback == 'required' %}required{% endif %}
                                 >
                             </textarea>
@@ -64,7 +64,7 @@
                 <textarea
                     id="assessment__rubric__question--feedback__value"
                     placeholder="{{ rubric_feedback_default_text }}"
-                    maxlength="500"
+                    maxlength="25000"
                 >
                 </textarea>
             </div>
