@@ -462,7 +462,9 @@ class TestGrade(XBlockHandlerTestCase):
 
             track_changes_edits = ''
             if should_track_changes:
-                track_changes_edits = submission_text + u'<span class="ins"> is wrong!</span>'
+                track_changes_edits = []
+                for sub_text in submission_text:
+                    track_changes_edits.append(sub_text + u'<span class="ins"> is wrong!</span>')
 
             # Create an assessment of the user's submission
             if not waiting_for_peer:

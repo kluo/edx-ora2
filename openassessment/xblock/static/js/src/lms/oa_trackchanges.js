@@ -17,7 +17,6 @@
         this.server = server;
         this.baseView = baseView;
         this.content = null;
-        this.initialSubmission = '';
     }
 
     TrackChangesView.prototype.enableTrackChanges = function enableTrackChanges() {
@@ -25,58 +24,73 @@
         var $ = window.jQuery;
         var ice = window.ice;
         var confirm = window.confirm;
-        var element = document.getElementById('track-changes-content');
+        var element;
+        var elements = document.querySelectorAll('[id^=track-changes-content_]')
+        var trackers = []
 
-        if (!element) {
+        if (!elements) {
             return;
         }
-        this.initialSubmission = $(element).html();
-        tracker = new ice.InlineChangeEditor({
-            element: element,
-            handleEvents: true,
-            currentUser: { id: 1, name: 'Reviewer' },
-            plugins: [
-                {
-                    // Track content that is cut and pasted
-                    name: 'IceCopyPastePlugin',
-                    settings: {
-                        // List of tags and attributes to preserve when cleaning a paste
-                        preserve: 'p,a[href],span[id,class]em,strong'
+        
+        for (index = 0; index < elements.length; index++) {
+            element = elements[index];
+            
+            tracker = new ice.InlineChangeEditor({
+                element: element,
+                handleEvents: true,
+                currentUser: { id: 1, name: 'Reviewer' },
+                plugins: [
+                    {
+                        // Track content that is cut and pasted
+                        name: 'IceCopyPastePlugin',
+                        settings: {
+                            // List of tags and attributes to preserve when cleaning a paste
+                            preserve: 'p,a[href],span[id,class]em,strong'
+                        }
                     }
-                }
-            ]
-        });
-        tracker.startTracking();
+                ]
+            });
+            tracker.startTracking();
+            trackers.push(tracker);
 
-        $('#track_changes_clear_button').click(function () {
-            if (confirm('Are you sure you want to clear your changes?')) {
-                tracker.rejectAll();
-            }
-        });
+            $('#track_changes_clear_button_' + index).click(function () {
+            	var suffix = this.id.split('_').pop();
+                if (confirm('Are you sure you want to clear your changes?')) {
+                    trackers[suffix].rejectAll();
+                }
+            });
+        }
     };
 
+    
     TrackChangesView.prototype.getEditedContent = function getEditedContent() {
         var $ = window.jQuery;
-        var view = this;
         var changeTracking = $('#openassessment__peer-assessment');
-        var editedContent = $('#track-changes-content', changeTracking).html();
-        if (editedContent === view.initialSubmission) {
-            editedContent = '';
+        var editedContents = [];
+        var trackChangesContent = $('[id^=track-changes-content_]');
+        
+        if (trackChangesContent.size() > 0) {
+            for (index = 0; index < trackChangesContent.length; index++) {
+                var editedContentHtml = trackChangesContent.get(index).innerHTML;
+        
+                editedContents.push(editedContentHtml);
+            }
         }
-        return editedContent;
+        return editedContents;
     };
+   
 
     TrackChangesView.prototype.displayTrackChanges = function displayTrackChanges() {
         var view = this;
         var $ = window.jQuery;
-        var changeTracking = $('.submission__answer__display__content__edited', view.element);
-        var gradingTitleHeader = changeTracking.siblings('.submission__answer__display__title');
-        gradingTitleHeader.wrapInner('<span class="yours"></span>');
-        var peerEditSelect = $('<select><option value="yours">Your Unedited Submission</option></select>')
+        var editedResponse = $('.submission__answer__display__content.edited.part1', view.element);
+        var gradingTitleHeader = $('#openassessment__grade .submission__answer__display__title');
+        gradingTitleHeader.wrapInner('<span class="original"></span>');
+        var peerEditSelect = $('<select><option value="original">Your Unedited Submission</option></select>')
             .insertBefore(gradingTitleHeader)
             .wrap("<div class='submission__answer__display__content__peeredit__select'>");
         $('<span>Show response with: </span>').insertBefore(peerEditSelect);
-        $(changeTracking).each(function () {
+        $(editedResponse).each(function () {
             var peerNumber = $(this).data('peer-num');
             $('<span class="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</span>")
                 .appendTo(gradingTitleHeader).hide();
@@ -88,13 +102,13 @@
             $('.submission__answer__display__title span', view.element).hide();
             $('.submission__answer__display__title', view.element).children('.' + valueSelected).show();
 
-            if (valueSelected === 'yours') {
-                $('.submission__answer__display__content__edited', view.element).hide();
-                $('#submission__answer__display__content__original', view.element).show();
+            if (valueSelected === 'original') {
+                $('.submission__answer__display__content.edited', view.element).hide();
+                $('.submission__answer__display__content.original', view.element).show();
             } else {
-                $('#submission__answer__display__content__original', view.element).hide();
-                $('.submission__answer__display__content__edited', view.element).hide();
-                $('#submission__answer__display__content__edited__' + valueSelected, view.element).show();
+                $('.submission__answer__display__content.original', view.element).hide();
+                $('.submission__answer__display__content.edited', view.element).hide();
+                $('.submission__answer__display__content.edited.' + valueSelected, view.element).show();
             }
         });
     };

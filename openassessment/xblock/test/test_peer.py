@@ -397,6 +397,7 @@ class TestPeerAssessmentRender(XBlockHandlerTestCase):
             'review_num': 1,
             'submit_button_text': 'submit your assessment & move to response #2',
             'allow_latex': False,
+            'track_changes': '',
         }
 
         self._assert_path_and_context(
@@ -812,18 +813,19 @@ class TestPeerAssessHandler(XBlockHandlerTestCase):
 
         sally_student_item = copy.deepcopy(student_item)
         sally_student_item['student_id'] = "Sally"
-        sallys_answer = u"Sally's answer"
-        sally_submission = xblock.create_submission(sally_student_item, sallys_answer)
+        sally_submission = xblock.create_submission(sally_student_item, (u"Sally's answer 1", u"Sally's answer 2"))
 
         # Hal comes and submits a response.
         hal_student_item = copy.deepcopy(student_item)
         hal_student_item['student_id'] = "Hal"
-        hals_answer = u"Hal's answer"
-        hal_submission = xblock.create_submission(hal_student_item, hals_answer)
+        hal_submission = xblock.create_submission(hal_student_item, (u"Hals answer 1", u"Hals answer 2"))
 
         number_of_required_grades = 1
-        track_changes_edits_hal = sallys_answer + u'<span class="ins"> is wrong!</span>'
-        track_changes_edits_sally = hals_answer + u'<span class="ins"> is wrong!</span>'
+        track_changes_edits_hal = (u"Sally's answer 1" + u'<span class="ins"> is wrong!</span>',
+                                   u"Sally's answer 2" + u'<span class="ins"> is wrong!</span>')
+      
+        track_changes_edits_sally = (u"Hals answer 1" + u'<span class="ins"> is wrong!</span>',
+                                     u"Hals answer 2" + u'<span class="ins"> is wrong!</span>')
 
         # Now Hal will assess Sally.
         assessment = copy.deepcopy(self.ASSESSMENT)
@@ -854,7 +856,7 @@ class TestPeerAssessHandler(XBlockHandlerTestCase):
         )
 
         # If Over Grading is on, this should now return Sally or Hal's response to Bob.
-        submission = xblock.create_submission(student_item, u"Bob's answer")
+        submission = xblock.create_submission(student_item, (u"Bob's answer 1", u"Bob's answer 2"))
         workflow_info = xblock.get_workflow_info()
         self.assertEqual(workflow_info["status"], u'peer')
 
@@ -863,7 +865,9 @@ class TestPeerAssessHandler(XBlockHandlerTestCase):
         request.params = {}
         peer_response = xblock.render_peer_assessment(request)
         self.assertIsNotNone(peer_response)
-        self.assertNotIn(submission["answer"]["text"].encode('utf-8'), peer_response.body)
+
+        for part in submission['answer']['parts']:
+            self.assertNotIn(part['text'].encode('utf-8'), peer_response.body)
 
         # Validate Peer Rendering.
         self.assertTrue("Sally".encode('utf-8') in peer_response.body or
