@@ -64,7 +64,6 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
                     dataType: "html"
                 }).done(function(data) {
                     defer.resolveWith(this, [data]);
-                    that.renderLatex(data);
                 }).fail(function(data) {
                     defer.rejectWith(this, [gettext('This section could not be loaded.')]);
                 });
@@ -78,11 +77,9 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
             element: The element to modify.
         **/
         renderLatex: function(element) {
-            $('.allow--latex', element).each(
-                function() {
-                    MathJax.Hub.Queue(['Typeset', MathJax.Hub, this]);
-                }
-            );
+            element.filter(".allow--latex").each(function() {
+                MathJax.Hub.Queue(['Typeset', MathJax.Hub, this]);
+            });
         },
 
         /**
@@ -111,7 +108,6 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
                     data: {continue_grading: true}
                 }).done(function(data) {
                         defer.resolveWith(this, [data]);
-                        view.renderLatex(data);
                     }).fail(function(data) {
                         defer.rejectWith(this, [gettext('This section could not be loaded.')]);
                     });
@@ -121,14 +117,14 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
         /**
          Load the Student Info section in Staff Info.
          **/
-        studentInfo: function(student_id) {
+        studentInfo: function(student_username) {
             var url = this.url('render_student_info');
             return $.Deferred(function(defer) {
                 $.ajax({
                     url: url,
                     type: "POST",
                     dataType: "html",
-                    data: {student_id: student_id}
+                    data: {student_username: student_username}
                 }).done(function(data) {
                         defer.resolveWith(this, [data]);
                     }).fail(function(data) {
@@ -141,7 +137,7 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
          Submit a grade to override the peer assessment grade for this student.
          
         Args:
-            student_id (string): The id of the student.
+            student_username (string): The username of the student.
             points_override (string): The points input by the instructor to override the peer grade.
             points_possible (string): The max points possible for the submission.
 
@@ -149,14 +145,14 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
             A JQuery promise, which resolves with the HTML of the rendered XBlock
             and fails with an error message.
          **/
-        overridePeerScore: function(studentId, pointsOverride, pointsPossible) {
+        overridePeerScore: function(studentUsername, pointsOverride, pointsPossible) {
             var url = this.url('peer_score_override');
             return $.Deferred(function(defer) {
                 $.ajax({
                     url: url,
                     type: 'POST',
                     data: JSON.stringify({
-                        student_id: studentId,
+                        student_username: studentUsername,
                         points_override: pointsOverride,
                         points_possible: pointsPossible
                     }),
@@ -491,7 +487,7 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
         updateEditorContext: function(kwargs) {
             var url = this.url('update_editor_context');
             var payload = JSON.stringify({
-                prompt: kwargs.prompt,
+                prompts: kwargs.prompts,
                 feedback_prompt: kwargs.feedbackPrompt,
                 feedback_default_text: kwargs.feedback_default_text,
                 title: kwargs.title,
@@ -590,6 +586,34 @@ if (typeof OpenAssessment.Server == "undefined" || !OpenAssessment.Server) {
                     }).fail(function(data) {
                         defer.rejectWith(this, [gettext('Could not retrieve download url.')]);
                     });
+            }).promise();
+        },
+
+        /**
+            Cancel the submission from peer grading pool.
+            Args:
+                submissionUUID: ID for submission to be cancelled from pool.
+                comments: reason to cancel the submission
+          **/
+        cancelSubmission: function (submissionUUID, comments) {
+            var url = this.url('cancel_submission');
+            var payload = JSON.stringify({
+                submission_uuid: submissionUUID,
+                comments: comments
+            });
+            return $.Deferred(function (defer) {
+                $.ajax({ type: "POST", url: url, data: payload }).done(
+                    function(data) {
+                        if (data.success) {
+                            defer.resolveWith(this, [data.msg]);
+                        }
+                        else {
+                            defer.rejectWith(this, [data.msg]);
+                        }
+                    }
+                ).fail(function(data) {
+                    defer.rejectWith(this, [gettext('The submission could not be removed from the grading pool.')]);
+                });
             }).promise();
         }
     };

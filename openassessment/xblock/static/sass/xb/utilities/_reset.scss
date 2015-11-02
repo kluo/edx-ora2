@@ -81,14 +81,6 @@
     background: transparent;
   }
 
-  /**
-   * Improve readability when focused and also mouse hovered in all browsers.
-   */
-
-  a:active,
-  a:hover {
-    outline: 0;
-  }
 
   /* Text-level semantics
      ========================================================================== */
@@ -370,7 +362,7 @@
   fieldset {
     border: 1px solid #c0c0c0;
     margin: 0 2px;
-    padding: 0.35em 0.625em 0.75em;
+    @include padding(0.35em, 0.625em, 0.75em, 0.625em);
   }
 
   /**
@@ -441,7 +433,6 @@
     vertical-align: baseline;
     border: 0;
     padding: 0;
-    outline: 0;
     font-weight: 400;
   }
 

@@ -32,6 +32,9 @@ RUBRIC_DICT = {
     ]
 }
 
+ANSWER_1 = {"text": "Shoot Hot Rod"}
+ANSWER_2 = {"text": "Ultra Magnus fumble"}
+
 ALGORITHM_ID = "Ease"
 
 ON_INIT_PARAMS = {
@@ -48,6 +51,13 @@ ITEM_1 = {
     "item_type": "openassessment",
 }
 
+ITEM_2 = {
+    "student_id": "Optimus Prime 002",
+    "item_id": "Matrix of Leadership(COPY)",
+    "course_id": "Advanced Auto Mechanics 201",
+    "item_type": "openassessment",
+}
+
 
 @ddt.ddt
 class TestAssessmentWorkflowApi(CacheResetTest):
@@ -57,7 +67,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
         first_step = data["steps"][0] if data["steps"] else "peer"
         if "ai" in data["steps"]:
             first_step = data["steps"][1] if len(data["steps"]) > 1 else "waiting"
-        submission = sub_api.create_submission(ITEM_1, "Shoot Hot Rod")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
         workflow = workflow_api.create_workflow(submission["uuid"], data["steps"], ON_INIT_PARAMS)
 
         workflow_keys = set(workflow.keys())
@@ -141,7 +151,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
         self.assertEquals("waiting", workflow['status'])
 
     def test_update_peer_workflow(self):
-        submission = sub_api.create_submission(ITEM_1, "Shoot Hot Rod")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
         workflow = workflow_api.create_workflow(submission["uuid"], ["training", "peer"], ON_INIT_PARAMS)
         StudentTrainingWorkflow.create_workflow(submission_uuid=submission["uuid"])
         requirements = {
@@ -195,7 +205,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
     @patch.object(ai_api, 'assessment_is_finished')
     @patch.object(ai_api, 'get_score')
     def test_ai_score_set(self, mock_score, mock_is_finished):
-        submission = sub_api.create_submission(ITEM_1, "Ultra Magnus fumble")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_2)
         mock_is_finished.return_value = True
         score = {"points_earned": 7, "points_possible": 10}
         mock_score.return_value = score
@@ -208,7 +218,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
     @ddt.unpack
     @raises(workflow_api.AssessmentWorkflowInternalError)
     def test_create_ai_workflow_no_rubric(self, rubric, algorithm_id):
-        submission = sub_api.create_submission(ITEM_1, "Shoot Hot Rod")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
         on_init_params = {
             'ai': {
                 'rubric': rubric,
@@ -221,7 +231,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
     @raises(workflow_api.AssessmentWorkflowInternalError)
     def test_ai_on_init_failures(self, mock_on_init):
         mock_on_init.side_effect = AIError("Kaboom!")
-        submission = sub_api.create_submission(ITEM_1, "Ultra Magnus fumble")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_2)
         workflow_api.create_workflow(submission["uuid"], ["ai"], ON_INIT_PARAMS)
 
     @patch.object(Submission.objects, 'get')
@@ -236,14 +246,14 @@ class TestAssessmentWorkflowApi(CacheResetTest):
     @raises(workflow_api.AssessmentWorkflowInternalError)
     def test_unexpected_workflow_errors_wrapped(self, data, mock_create):
         mock_create.side_effect = DatabaseError("Kaboom!")
-        submission = sub_api.create_submission(ITEM_1, "Ultra Magnus fumble")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_2)
         workflow_api.create_workflow(submission["uuid"], data["steps"], ON_INIT_PARAMS)
 
     @patch.object(PeerWorkflow.objects, 'get_or_create')
     @raises(workflow_api.AssessmentWorkflowInternalError)
     def test_unexpected_peer_workflow_errors_wrapped(self, mock_create):
         mock_create.side_effect = DatabaseError("Kaboom!")
-        submission = sub_api.create_submission(ITEM_1, "Ultra Magnus fumble")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_2)
         workflow_api.create_workflow(submission["uuid"], ["peer", "self"], ON_INIT_PARAMS)
 
     @patch.object(AssessmentWorkflow.objects, 'get')
@@ -251,7 +261,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
     @raises(workflow_api.AssessmentWorkflowInternalError)
     def test_unexpected_exception_wrapped(self, data, mock_create):
         mock_create.side_effect = Exception("Kaboom!")
-        submission = sub_api.create_submission(ITEM_1, "Ultra Magnus fumble")
+        submission = sub_api.create_submission(ITEM_1, ANSWER_2)
         workflow_api.update_from_assessments(submission["uuid"], data["steps"])
 
     @ddt.file_data('data/assessments.json')
@@ -283,6 +293,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
             {"status": "self", "count": 0},
             {"status": "waiting", "count": 0},
             {"status": "done", "count": 0},
+            {"status": "cancelled", "count": 0},
         ])
 
         self.assertFalse("ai" in [count['status'] for count in counts])
@@ -301,6 +312,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
         self._create_workflow_with_status("user 8", "test/1/1", "peer-problem", "done")
         self._create_workflow_with_status("user 9", "test/1/1", "peer-problem", "done")
         self._create_workflow_with_status("user 10", "test/1/1", "peer-problem", "done")
+        self._create_workflow_with_status("user 11", "test/1/1", "peer-problem", "cancelled")
 
         # Now the counts should be updated
         counts = workflow_api.get_status_counts(
@@ -314,6 +326,7 @@ class TestAssessmentWorkflowApi(CacheResetTest):
             {"status": "self", "count": 2},
             {"status": "waiting", "count": 3},
             {"status": "done", "count": 4},
+            {"status": "cancelled", "count": 1},
         ])
 
         self.assertFalse("ai" in [count['status'] for count in counts])
@@ -352,6 +365,113 @@ class TestAssessmentWorkflowApi(CacheResetTest):
 
         with self.assertRaises(AssessmentWorkflowInternalError):
             workflow_api.update_from_assessments(submission['uuid'], {})
+
+    def test_cancel_the_assessment_workflow(self):
+        # Create the submission and assessment workflow.
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
+        workflow = workflow_api.create_workflow(submission["uuid"], ["peer"])
+
+        requirements = {
+            "peer": {
+                "must_grade": 1,
+                "must_be_graded_by": 1
+            }
+        }
+
+        # Check the workflow is not cancelled.
+        self.assertFalse(workflow_api.is_workflow_cancelled(submission["uuid"]))
+
+        # Check the status is not cancelled.
+        self.assertNotEqual(workflow.get('status'), 'cancelled')
+
+        # Check the  points_earned are not 0
+        self.assertNotEqual(workflow['score'], 0)
+
+        # Cancel the workflow for submission.
+        workflow_api.cancel_workflow(
+            submission_uuid=submission["uuid"],
+            comments="Inappropriate language",
+            cancelled_by_id=ITEM_2['student_id'],
+            assessment_requirements=requirements
+        )
+
+        # Check workflow is cancelled.
+        self.assertTrue(workflow_api.is_workflow_cancelled(submission["uuid"]))
+
+        # Status for workflow should be cancelled.
+        workflow = AssessmentWorkflow.get_by_submission_uuid(submission["uuid"])
+        self.assertEqual(workflow.status, 'cancelled')
+
+        # Score points_earned should be 0.
+        # In case of 0 earned points the score would be None.
+        self.assertEqual(workflow.score, None)
+
+    def test_cancel_the_assessment_workflow_does_not_exist(self):
+        # Create the submission and assessment workflow.
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
+        workflow = workflow_api.create_workflow(submission["uuid"], ["peer"])
+
+        requirements = {
+            "peer": {
+                "must_grade": 1,
+                "must_be_graded_by": 1
+            }
+        }
+
+        # Check if workflow is cancelled.
+        self.assertFalse(workflow_api.is_workflow_cancelled(submission["uuid"]))
+        self.assertNotEqual(workflow.get('status'), 'cancelled')
+
+        # Cancel the workflow raises DoesNotExist.
+        with self.assertRaises(workflow_api.AssessmentWorkflowError):
+            workflow_api.cancel_workflow(
+                submission_uuid="1234567098789",
+                comments="Inappropriate language",
+                cancelled_by_id=ITEM_2['student_id'],
+                assessment_requirements=requirements
+            )
+
+        # Status for workflow should not be cancelled.
+        workflow = AssessmentWorkflow.get_by_submission_uuid(submission["uuid"])
+        self.assertNotEqual(workflow.status, 'cancelled')
+
+    def test_get_the_cancelled_workflow(self):
+        # Create the submission and assessment workflow.
+        submission = sub_api.create_submission(ITEM_1, ANSWER_1)
+        workflow = workflow_api.create_workflow(submission["uuid"], ["peer"])
+
+        requirements = {
+            "peer": {
+                "must_grade": 1,
+                "must_be_graded_by": 1
+            }
+        }
+
+        # Check the workflow is not cancelled.
+        self.assertFalse(workflow_api.is_workflow_cancelled(submission["uuid"]))
+
+        # Check the status is not cancelled.
+        self.assertNotEqual(workflow.get('status'), 'cancelled')
+
+        # Check the  points_earned are not 0
+        self.assertNotEqual(workflow['score'], 0)
+
+        cancelled_workflow = workflow_api.get_assessment_workflow_cancellation(submission["uuid"])
+        self.assertIsNone(cancelled_workflow)
+
+        # Cancel the workflow for submission.
+        workflow_api.cancel_workflow(
+            submission_uuid=submission["uuid"],
+            comments="Inappropriate language",
+            cancelled_by_id=ITEM_2['student_id'],
+            assessment_requirements=requirements
+        )
+
+        # Check workflow is cancelled.
+        self.assertTrue(workflow_api.is_workflow_cancelled(submission["uuid"]))
+
+        workflow = workflow_api.get_assessment_workflow_cancellation(submission["uuid"])
+        self.assertIsNotNone(workflow)
 
     def _create_workflow_with_status(
         self, student_id, course_id, item_id,

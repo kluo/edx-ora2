@@ -181,7 +181,7 @@ describe("OpenAssessment edit assessment views", function() {
             expect(view.description()).toEqual({
                 examples: [
                     {
-                        answer: 'Test answer',
+                        answer: ['Test answer 1', 'Test answer 2'],
                         options_selected: [
                             {
                                 criterion: 'criterion_with_two_options',
@@ -198,7 +198,7 @@ describe("OpenAssessment edit assessment views", function() {
             expect(view.description()).toEqual({
                 examples: [
                     {
-                        answer: 'Test answer',
+                        answer: ['Test answer 1', 'Test answer 2'],
                         options_selected: [
                             {
                                 criterion: 'criterion_with_two_options',
@@ -207,7 +207,7 @@ describe("OpenAssessment edit assessment views", function() {
                         ]
                     },
                     {
-                        answer: '',
+                        answer: ['', ''],
                         options_selected: [
                             {
                                 criterion: 'criterion_with_two_options',

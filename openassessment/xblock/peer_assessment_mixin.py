@@ -7,11 +7,12 @@ from openassessment.assessment.api import peer as peer_api
 from openassessment.assessment.errors import (
     PeerAssessmentRequestError, PeerAssessmentInternalError, PeerAssessmentWorkflowError
 )
+from openassessment.workflow import api as workflow_api
 from openassessment.workflow.errors import AssessmentWorkflowError
 from openassessment.xblock.defaults import DEFAULT_RUBRIC_FEEDBACK_TEXT
 from .data_conversion import create_rubric_dict
 from .resolve_dates import DISTANT_FUTURE
-from .data_conversion import clean_criterion_feedback
+from .data_conversion import clean_criterion_feedback, create_submission_dict
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class PeerAssessmentMixin(object):
             )
             return {
                 'success': False,
-                'msg': self._('This feedback has already been submitted.'),
+                'msg': self._('This feedback has already been submitted or the submission has been cancelled.'),
             }
 
         assessment_ui_model = self.get_assessment_module('peer-assessment')
@@ -188,6 +189,7 @@ class PeerAssessmentMixin(object):
             context_dict['peer_due'] = due_date
 
         workflow = self.get_workflow_info()
+        workflow_status = workflow.get('status')
         peer_complete = workflow.get('status_details', {}).get('peer', {}).get('complete', False)
         continue_grading = continue_grading and peer_complete
 
@@ -217,9 +219,14 @@ class PeerAssessmentMixin(object):
 
             context_dict['track_changes'] = assessment.get('track_changes', '')
 
+        if workflow_status == "cancelled":
+            path = 'openassessmentblock/peer/oa_peer_cancelled.html'
+            # Sets the XBlock boolean to signal to Message that it WAS able to grab a submission
+            self.no_peers = True
+
         # Once a student has completed a problem, it stays complete,
         # so this condition needs to be first.
-        if (workflow.get('status') == 'done' or finished) and not continue_grading:
+        elif (workflow.get('status') == 'done' or finished) and not continue_grading:
             path = "openassessmentblock/peer/oa_peer_complete.html"
 
         # Allow continued grading even if the problem due date has passed
@@ -227,7 +234,7 @@ class PeerAssessmentMixin(object):
             peer_sub = self.get_peer_submission(student_item, assessment)
             if peer_sub:
                 path = 'openassessmentblock/peer/oa_peer_turbo_mode.html'
-                context_dict["peer_submission"] = peer_sub
+                context_dict["peer_submission"] = create_submission_dict(peer_sub, self.prompts)
 
                 # Determine if file upload is supported for this XBlock.
                 context_dict["allow_file_upload"] = self.allow_file_upload
@@ -243,7 +250,7 @@ class PeerAssessmentMixin(object):
             peer_sub = self.get_peer_submission(student_item, assessment)
             if peer_sub:
                 path = 'openassessmentblock/peer/oa_peer_assessment.html'
-                context_dict["peer_submission"] = peer_sub
+                context_dict["peer_submission"] = create_submission_dict(peer_sub, self.prompts)
                 # Determine if file upload is supported for this XBlock.
                 context_dict["allow_file_upload"] = self.allow_file_upload
                 context_dict["peer_file_url"] = self.get_download_url_from_submission(peer_sub)

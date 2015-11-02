@@ -14,6 +14,7 @@ OpenAssessment.PeerView = function(element, server, baseView) {
     this.server = server;
     this.baseView = baseView;
     this.rubric = null;
+    this.trackChangesView = new OpenAssessment.TrackChangesView(this.element, this.server, this);
 };
 
 
@@ -28,6 +29,7 @@ OpenAssessment.PeerView.prototype = {
             function(html) {
                 // Load the HTML and install event handlers
                 $('#openassessment__peer-assessment', view.element).replaceWith(html);
+                view.server.renderLatex($('#openassessment__peer-assessment', view.element));
                 view.installHandlers(false);
             }
         ).fail(function(errMsg) {
@@ -51,6 +53,7 @@ OpenAssessment.PeerView.prototype = {
             function(html) {
                 // Load the HTML and install event handlers
                 $('#openassessment__peer-assessment', view.element).replaceWith(html);
+                view.server.renderLatex($('#openassessment__peer-assessment', view.element));
                 view.installHandlers(true);
             }
         ).fail(function(errMsg) {
@@ -90,6 +93,7 @@ OpenAssessment.PeerView.prototype = {
     installHandlers: function(isContinuedAssessment) {
         var sel = $('#openassessment__peer-assessment', this.element);
         var view = this;
+        this.trackChangesContent = [];
 
         // Install a click handler for collapse/expand
         this.baseView.setUpCollapseExpand(sel);
@@ -102,13 +106,16 @@ OpenAssessment.PeerView.prototype = {
         }
 
         // Initialize track changes
-        var trackChangesSelector = $("#track-changes-content", this.element);
-        if (trackChangesSelector.size() > 0) {
-            var trackChangesElement = trackChangesSelector.get(0);
-            this.trackChanges = new OpenAssessment.TrackChangesView(trackChangesElement);
-            view.baseView.enableTrackChangesView();
-        }
-
+      var trackChangesSelector = $('[id^=track-changes-content_]', this.element);
+      if (trackChangesSelector.size() > 0) {
+          for (index = 0; index < trackChangesSelector.length; index++) {
+              var trackChangesElement = trackChangesSelector.get(index);
+              this.trackChangesView = new OpenAssessment.TrackChangesView(trackChangesElement);
+              this.trackChangesContent.push(this.trackChangesView);
+          }
+          view.baseView.enableTrackChangesView();
+      }   
+      
         // Install a change handler for rubric options to enable/disable the submit button
         if (this.rubric !== null) {
             this.rubric.canSubmitCallback($.proxy(view.peerSubmitEnabled, view));
@@ -199,8 +206,8 @@ OpenAssessment.PeerView.prototype = {
         var view = this;
         var uuid = $('#openassessment__peer-assessment').data('submission-uuid');
         var editedContent = '';
-        if (this.trackChanges) {
-            editedContent = this.trackChanges.getEditedContent();
+        if (this.trackChangesContent) {
+            editedContent = this.trackChangesView.getEditedContent();
         }
 
         view.baseView.toggleActionError('peer', null);
