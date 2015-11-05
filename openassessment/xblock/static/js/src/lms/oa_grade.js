@@ -27,6 +27,7 @@ OpenAssessment.GradeView.prototype = {
             function(html) {
                 // Load the HTML and install event handlers
                 $('#openassessment__grade', view.element).replaceWith(html);
+                view.server.renderLatex($('#openassessment__grade', view.element));
                 view.installHandlers();
             }
         ).fail(function(errMsg) {
@@ -50,7 +51,7 @@ OpenAssessment.GradeView.prototype = {
         });
 
         // Initialize track changes
-        var trackChangesSelector = $(".submission__answer__display__content__edited", this.element);
+        var trackChangesSelector = $(".submission__answer__display__content.edited", this.element);
         if (trackChangesSelector.size() > 0) {
             var trackChangesElement = trackChangesSelector.get(0);
             this.trackChanges = new OpenAssessment.TrackChangesView(trackChangesElement);

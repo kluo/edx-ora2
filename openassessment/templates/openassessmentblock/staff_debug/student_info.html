@@ -11,7 +11,18 @@
             <div class="step__content">
                 <h3 class="title">{% trans "Student Response" %}</h3>
                 <div class="student__answer__display__content">
-                    {{ submission.answer.text|linebreaks }}
+                    {% if workflow_cancellation %}
+                        {% blocktrans with removed_by_username=workflow_cancellation.cancelled_by removed_datetime=workflow_cancellation.created_at|utc|date:"N j, Y H:i e" %}
+                            Student submission removed by {{ removed_by_username }} on {{ removed_datetime }}
+                        {% endblocktrans %}
+                        <br>
+                        <!-- Comments: Reason for Cancellation-->
+                        {% blocktrans with comments=workflow_cancellation.comments %}
+                            Comments: {{ comments }}
+                        {% endblocktrans %}
+                    {% else %}
+                        {% include "openassessmentblock/oa_submission_answer.html" with answer=submission.answer answer_text_label="The student's response to the question above:" %}
+                    {% endif %}
                 </div>
 
                 {% if submission.image_url %}
@@ -23,6 +34,60 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if not workflow_cancellation %}
+        <div id="openassessment__staff-info__cancel__submission"
+             class="openassessment__staff-info__cancel__submission wrapper--ui-staff wrapper--ui--collapse">
+            <div class="ui-staff ui-toggle-visibility is--collapsed">
+                <h2 class="staff-info__title ui-staff__title ui-toggle-visibility__control">
+                    <i class="ico icon-caret-right"></i>
+                    <span>{% trans "Remove submission from peer grading" %}</span>
+                </h2>
+
+                <div class="staff-info__cancel-submission__content ui-toggle-visibility__content">
+                    <div class="ui-staff__content__section">
+                        <div class="wrapper--input">
+
+                            <form id="openassessment_staff_cancel_submission_form"
+                                  data-submission-uuid="{{ submission.uuid }}">
+
+                                <ul class="list list--actions">
+                                    <li>
+                                        <div class="has--warnings">
+                                            <div class="warning">
+                                                {% trans "Caution: Removing a student's submission cannot be undone." %}
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <label for="staff-info__cancel-submission__comments"
+                                               class="label">{% trans "Comments:" %}</label>
+                                    </li>
+                                    <li>
+                                        <textarea
+                                                id="staff-info__cancel-submission__comments"
+                                                class="cancel_submission_comments"
+                                                value=""
+                                                maxlength="10000"></textarea>
+                                    </li>
+                                </ul>
+                                <ul class="list list--actions">
+                                    <li class="list--actions__item">
+                                        <a data-submission-uuid="{{ submission.uuid }}" aria-role="button" href=""
+                                           id="submit_cancel_submission" class="action--submit is--disabled">
+                                            <span class="copy">{% trans "Remove submission" %}</span>
+                                        </a>
+
+                                        <div class="cancel-submission-error"></div>
+                                    </li>
+                                </ul>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         {% if peer_assessments %}
         <div class="staff-info__status ui-staff__content__section">
@@ -46,8 +111,8 @@
                         {% for part in assessment.parts %}
                             {% if part.option.criterion.name == criterion.name %}
                         <tr>
-                            <td class="label">{{ criterion.name }}</td>
-                            <td class="value">{{ part.option.name }}</td>
+                            <td class="label">{{ criterion.label }}</td>
+                            <td class="value">{{ part.option.label }}</td>
                             <td class="value">{{ part.feedback }}</td>
                             <td class="value">{{ part.option.points }}</td>
                             <td class="value">{{ criterion.total_value }}</td>
@@ -64,36 +129,39 @@
                 {% endwith %}
             {%  endfor %}
         </div>
-            {% endif %}
+        {% endif %}
 
         {% if problem_closed or scores.points_earned > -1 %}
-        <div class="staff-info__status ui-staff__content__section">
-            <h2 class="title">{% trans "Scores" %}</h2>
-            <table class="staff-info__status__table">
-                <thead>
-                <tr>
-                    <th scope="col">{% trans "Peer Score" %}</th>
-                    <th scope="col">{% trans "Possible Score" %}</th>
-                    <th scope="col">{% trans "Override Score" %}</th>
-                </tr>
-                </thead>
+            {% if not workflow_cancellation %}
+                <div class="staff-info__status ui-staff__content__section">
+                    <h2 class="title">{% trans "Scores" %}</h2>
+                    <table class="staff-info__status__table">
+                        <thead>
+                        <tr>
+                            <th scope="col">{% trans "Peer Score" %}</th>
+                            <th scope="col">{% trans "Possible Score" %}</th>
+                            <th scope="col">{% trans "Override Score" %}</th>
+                        </tr>
+                        </thead>
                 
-                <tbody>
-                    <tr>
-                        <td id="openassessment_points_earned" class="label">{{ scores.points_earned }}</td>
-                        <td id="openassessment_points_possible" class="label">{{ scores.points_possible }}</td>
-                        <td id="openassessment_points_override" class="label">{{ scores.points_override }}</td>
-                    </tr>
-                </tbody>
-            </table>
+                        <tbody>
+                            <tr>
+                                <td id="openassessment_points_earned" class="label">{{ scores.points_earned }}</td>
+                                <td id="openassessment_points_possible" class="label">{{ scores.points_possible }}</td>
+                                <td id="openassessment_points_override" class="label">{{ scores.points_override }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
             
-            <form id="openassessment_override_score_form">
-                <label class="label" for="openassessment_override_score">{% trans "Override Peer Score - set to" %}</label>
-                <input id="openassessment_override_score" class="value" type="text" maxlength="3">
-                <a aria-role="button" id="submit_override_score" class="action--submit"><span class="copy">{% trans "Submit" %}</span></a>
-            </form>
-        </div>
+                    <form id="openassessment_override_score_form">
+                        <label class="label" for="openassessment_override_score">{% trans "Override Peer Score - set to" %}</label>
+                        <input id="openassessment_override_score" class="value" type="text" maxlength="3">
+                        <a aria-role="button" id="submit_override_score" class="action--submit"><span class="copy">{% trans "Submit" %}</span></a>
+                    </form>
+                </div>
+            {% endif %}
         {% endif %}
+
         {% if submitted_assessments %}
         <div class="staff-info__status ui-staff__content__section">
             <h3 class="title">{% trans "Peer Assessments Completed by This Student" %}</h3>
@@ -116,8 +184,8 @@
                             {% for part in assessment.parts %}
                                 {% if part.option.criterion.name == criterion.name %}
                                     <tr>
-                                        <td class="label">{{ criterion.name }}</td>
-                                        <td class="value">{{ part.option.name }}</td>
+                                        <td class="label">{{ criterion.label }}</td>
+                                        <td class="value">{{ part.option.label }}</td>
                                         <td class="value">{{ part.feedback }}</td>
                                         <td class="value">{{ part.option.points }}</td>
                                         <td class="value">{{ criterion.total_value }}</td>
@@ -154,8 +222,8 @@
                     {% for part in self_assessment.parts %}
                         {% if part.option.criterion.name == criterion.name %}
                             <tr>
-                                <td class="label">{{ criterion.name }}</td>
-                                <td class="value">{{ part.option.name }}</td>
+                                <td class="label">{{ criterion.label }}</td>
+                                <td class="value">{{ part.option.label }}</td>
                                 <td class="value">{{ part.option.points }}</td>
                                 <td class="value">{{ criterion.total_value }}</td>
                             </tr>
@@ -185,8 +253,8 @@
                         {% for part in example_based_assessment.parts %}
                             {% if part.option.criterion.name == criterion.name %}
                                 <tr>
-                                    <td class="label">{{ criterion.name }}</td>
-                                    <td class="value">{{ part.option.name }}</td>
+                                    <td class="label">{{ criterion.label }}</td>
+                                    <td class="value">{{ part.option.label }}</td>
                                     <td class="value">{{ part.option.points }}</td>
                                     <td class="value">{{ criterion.total_value }}</td>
                                 </tr>

@@ -7,14 +7,49 @@ User docs: |user-docs| Developer docs: |dev-docs|
 Installation
 ============
 
-The intent of this project is to be installed as Django apps that will be
-included in `edx-platform <https://github.com/edx/edx-platform>`_.
+The intent of this project is to be installed as Django apps that will be included in `edx-platform <https://github.com/edx/edx-platform>`_.
 
-To install all dependencies (assumes Ubuntu 12.04):
+But development is done in the Workbench which is part of the `xblock-sdk <https://github.com/edx/xblock-sdk>`_. Currently Ubuntu 12.04 is assumed. You can setup everything in a Vagrant instance.
+
+To do so install the latest VirtualBox >= 4.3.12 and the latest Vagrant >= 1.6.5.
+
+Clone the repo:
 
 .. code:: bash
 
+    mkdir orastack
+    cd orastack
+    git clone git@github.com:edx/edx-ora2.git
+
+Create the Vagrant instance:
+
+.. code:: bash
+
+    ln -s ./edx-ora2/Vagrantfile ./
+    vagrant plugin install vagrant-vbguest
+    vagrant up
+
+The first vagrant up will fail when setting up shared folders (because the user ora2 does not exist) so do:
+
+.. code:: bash
+
+    vagrant provision
+    vagrant reload
+
+Now you can ssh into the vagrant machine:
+
+.. code:: bash
+
+    vagrant ssh
+    sudo su ora2
+
+To install all dependencies:
+
+.. code:: bash
+
+    make install-sys-requirements
     make install
+    make install-dev
 
 
 Running the Development Server
@@ -25,11 +60,11 @@ Running the Development Server
     ./scripts/workbench.sh
 
 Additional arguments are passed to ``runserver``.  For example,
-to start the server on port 8001:
+to start the server on port 9000:
 
 .. code:: bash
 
-    ./scripts/workbench.sh 8001
+    ./scripts/workbench.sh 0.0.0.0:9000
 
 
 Combining and Minifying JavaScript and Sass
@@ -56,7 +91,7 @@ Make sure you commit the combined/minified files to the git repository!
 Running Tests
 =============
 
-To run all tests:
+To run all unit tests:
 
 .. code:: bash
 
@@ -79,6 +114,8 @@ To run the JavaScript tests in Chrome so you can use the debugger:
 .. code:: bash
 
     ./scripts/js-debugger.sh
+
+There are also acceptance and accessibility tests that run can be run against a sandbox.  For more information, about how to run these from your machine, check out `test/acceptance/README.rst <https://github.com/edx/edx-ora2/blob/master/test/acceptance/README.rst/>`__.
 
 
 i18n

@@ -41,7 +41,7 @@ class TestGrade(XBlockHandlerTestCase):
         },
     ]
 
-    SUBMISSION = u'ՇﻉรՇ รપ๒๓ٱรรٱѻก'
+    SUBMISSION = (u'ՇﻉรՇ', u'รપ๒๓ٱรรٱѻก')
 
     STEPS = ['peer', 'self']
 
@@ -61,6 +61,9 @@ class TestGrade(XBlockHandlerTestCase):
         self.assertIn(u'єאςєɭɭєภՇ ฬ๏гк!', resp.decode('utf-8'))
         self.assertIn(u'Good job!', resp.decode('utf-8'))
 
+        # Verify that student submission is in the view
+        self.assertIn(self.SUBMISSION[1], resp.decode('utf-8'))
+
         # Verify that the submission and peer steps show that we're graded
         # This isn't strictly speaking part of the grade step rendering,
         # but we've already done all the setup to get to this point in the flow,
@@ -68,6 +71,9 @@ class TestGrade(XBlockHandlerTestCase):
         resp = self.request(xblock, 'render_submission', json.dumps(dict()))
         self.assertIn('response', resp.lower())
         self.assertIn('complete', resp.lower())
+
+        # Verify that student submission is in the view
+        self.assertIn(self.SUBMISSION[1], resp.decode('utf-8'))
 
         resp = self.request(xblock, 'render_peer_assessment', json.dumps(dict()))
         self.assertIn('peer', resp.lower())
@@ -181,7 +187,6 @@ class TestGrade(XBlockHandlerTestCase):
             xblock, self.SUBMISSION, [], [], None, waiting_for_peer=True
         )
         resp = self.request(xblock, 'render_grade', json.dumps(dict()))
-
         # Verify that feedback from each scorer appears in the view
         self.assertNotIn(u'єאςєɭɭєภՇ', resp.decode('utf-8'))
         self.assertIn(u'Poor', resp.decode('utf-8'))
@@ -457,7 +462,9 @@ class TestGrade(XBlockHandlerTestCase):
 
             track_changes_edits = ''
             if should_track_changes:
-                track_changes_edits = submission_text + u'<span class="ins"> is wrong!</span>'
+                track_changes_edits = []
+                for sub_text in submission_text:
+                    track_changes_edits.append(sub_text + u'<span class="ins"> is wrong!</span>')
 
             # Create an assessment of the user's submission
             if not waiting_for_peer:

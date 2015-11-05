@@ -19,6 +19,8 @@ class TrackChanges(models.Model):
     owner_submission_uuid = UUIDField(version=1, db_index=True)
     scorer_id = models.CharField(max_length=40, db_index=True)
     edited_content = models.TextField(blank=True)
+    # edited content allowing multiple prompts (JSON-serialized)
+    json_edited_content = models.TextField(blank=True)
 
     class Meta:
         app_label = "assessment"

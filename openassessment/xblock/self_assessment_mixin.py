@@ -8,7 +8,7 @@ from openassessment.workflow import api as workflow_api
 from submissions import api as submission_api
 from .data_conversion import create_rubric_dict
 from .resolve_dates import DISTANT_FUTURE
-from .data_conversion import clean_criterion_feedback
+from .data_conversion import clean_criterion_feedback, create_submission_dict
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +66,12 @@ class SelfAssessmentMixin(object):
         workflow = self.get_workflow_info()
         workflow_status = workflow.get('status')
         self_complete = workflow.get('status_details', {}).get('self', {}).get('complete', False)
+        if workflow_status == 'cancelled':
+            path = 'openassessmentblock/self/oa_self_cancelled.html'
+            # Sets the XBlock boolean to signal to Message that it WAS able to grab a submission
+            self.no_peers = True
 
-        if self_complete:
+        elif self_complete:
             path = 'openassessmentblock/self/oa_self_complete.html'
         elif workflow_status == 'self' or problem_closed:
             assessment = self_api.get_assessment(workflow.get("submission_uuid"))
@@ -84,7 +88,7 @@ class SelfAssessmentMixin(object):
                 submission = submission_api.get_submission(self.submission_uuid)
                 context["rubric_criteria"] = self.rubric_criteria_with_labels
                 context["estimated_time"] = "20 minutes"  # TODO: Need to configure this.
-                context["self_submission"] = submission
+                context["self_submission"] = create_submission_dict(submission, self.prompts)
 
                 # Determine if file upload is supported for this XBlock.
                 context["allow_file_upload"] = self.allow_file_upload
@@ -129,7 +133,7 @@ class SelfAssessmentMixin(object):
                 data['options_selected'],
                 clean_criterion_feedback(self.rubric_criteria, data['criterion_feedback']),
                 data['overall_feedback'],
-                create_rubric_dict(self.prompt, self.rubric_criteria_with_labels)
+                create_rubric_dict(self.prompts, self.rubric_criteria_with_labels)
             )
             self.publish_assessment_event("openassessmentblock.self_assess", assessment)
 

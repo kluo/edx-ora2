@@ -1,9 +1,10 @@
 """An XBlock where students can read a question and compose their response"""
 
+import copy
 import datetime as dt
+import json
 import logging
 import pkg_resources
-import copy
 
 import pytz
 
@@ -31,7 +32,7 @@ from openassessment.workflow.errors import AssessmentWorkflowError
 from openassessment.xblock.student_training_mixin import StudentTrainingMixin
 from openassessment.xblock.validation import validator
 from openassessment.xblock.resolve_dates import resolve_dates, DISTANT_PAST, DISTANT_FUTURE
-from openassessment.xblock.data_conversion import create_rubric_dict
+from openassessment.xblock.data_conversion import create_prompts_list, create_rubric_dict, update_assessments_format
 
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ def load(path):
     return data.decode("utf8")
 
 @XBlock.needs("i18n")
+@XBlock.needs("user")
 class OpenAssessmentBlock(
     MessageMixin,
     SubmissionMixin,
@@ -143,7 +145,7 @@ class OpenAssessmentBlock(
     prompt = String(
         default=DEFAULT_PROMPT,
         scope=Scope.content,
-        help="A prompt to display to a student (plain text)."
+        help="The prompts to display to a student."
     )
 
     track_changes = String(
@@ -206,11 +208,30 @@ class OpenAssessmentBlock(
         help="Indicates whether or not there are peers to grade."
     )
 
-    def get_student_item_dict(self):
+    @property
+    def course_id(self):
+        return self._serialize_opaque_key(self.xmodule_runtime.course_id)  # pylint:disable=E1101
+
+    def get_anonymous_user_id(self, username, course_id):
+        """
+        Get the anonymous user id from Xblock user service.
+
+        Args:
+            username(str): user's name entered by staff to get info.
+            course_id(str): course id.
+
+        Returns:
+            A unique id for (user, course) pair
+        """
+        return self.runtime.service(self, 'user').get_anonymous_user_id(username, course_id)
+
+    def get_student_item_dict(self, anonymous_user_id=None):
         """Create a student_item_dict from our surrounding context.
 
         See also: submissions.api for details.
 
+        Args:
+            anonymous_user_id(str): A unique anonymous_user_id for (user, course) pair.
         Returns:
             (dict): The student item associated with this XBlock instance. This
                 includes the student id, item id, and course id.
@@ -221,8 +242,11 @@ class OpenAssessmentBlock(
         # This is not the real way course_ids should work, but this is a
         # temporary expediency for LMS integration
         if hasattr(self, "xmodule_runtime"):
-            course_id = self._serialize_opaque_key(self.xmodule_runtime.course_id)  # pylint:disable=E1101
-            student_id = self.xmodule_runtime.anonymous_student_id  # pylint:disable=E1101
+            course_id = self.course_id  # pylint:disable=E1101
+            if anonymous_user_id:
+                student_id = anonymous_user_id
+            else:
+                student_id = self.xmodule_runtime.anonymous_student_id  # pylint:disable=E1101
         else:
             course_id = "edX/Enchantment_101/April_1"
             if self.scope_ids.user_id is None:
@@ -266,14 +290,20 @@ class OpenAssessmentBlock(
         # All data we intend to pass to the front end.
         context_dict = {
             "title": self.title,
-            "question": self.prompt,
+            "prompts": self.prompts,
             "rubric_assessments": ui_models,
             "show_staff_debug_info": self.is_course_staff and not self.in_studio_preview,
         }
         template = get_template("openassessmentblock/oa_base.html")
         context = Context(context_dict)
         frag = Fragment(template.render(context))
-        frag.add_css(load("static/css/openassessment.css"))
+
+        i18n_service = self.runtime.service(self, 'i18n')
+        if hasattr(i18n_service, 'get_language_bidi') and i18n_service.get_language_bidi():
+            frag.add_css(load("static/css/openassessment-rtl.css"))
+        else:
+            frag.add_css(load("static/css/openassessment-ltr.css"))
+
         frag.add_javascript(load("static/js/openassessment-lms.min.js"))
 
         track_changes_fragments = set([x['track_changes'] for x in ui_models if x.get('track_changes', None)])
@@ -309,6 +339,19 @@ class OpenAssessmentBlock(
         """
         if hasattr(self, 'xmodule_runtime'):
             return getattr(self.xmodule_runtime, 'user_is_staff', False)
+        else:
+            return False
+
+    @property
+    def is_beta_tester(self):
+        """
+        Check whether the user is a beta tester.
+
+        Returns:
+            bool
+        """
+        if hasattr(self, 'xmodule_runtime'):
+            return getattr(self.xmodule_runtime, 'user_is_beta_tester', False)
         else:
             return False
 
@@ -410,7 +453,7 @@ class OpenAssessmentBlock(
 
         xblock_validator = validator(block, block._, strict_post_release=False)
         xblock_validator(
-            create_rubric_dict(config['prompt'], config['rubric_criteria']),
+            create_rubric_dict(config['prompts'], config['rubric_criteria']),
             config['rubric_assessments'],
             submission_start=config['submission_start'],
             submission_due=config['submission_due'],
@@ -424,7 +467,7 @@ class OpenAssessmentBlock(
         block.submission_start = config['submission_start']
         block.submission_due = config['submission_due']
         block.title = config['title']
-        block.prompt = config['prompt']
+        block.prompts = config['prompts']
         block.allow_file_upload = config['allow_file_upload']
         block.allow_latex = config['allow_latex']
         block.leaderboard_show = config['leaderboard_show']
@@ -435,6 +478,40 @@ class OpenAssessmentBlock(
     def _(self):
         i18nService = self.runtime.service(self, 'i18n')
         return i18nService.ugettext
+
+    @property
+    def prompts(self):
+        """
+        Return the prompts.
+
+        Initially a block had a single prompt which was saved as a simple
+        string in the prompt field. Now prompts are saved as a serialized
+        list of dicts in the same field. If prompt field contains valid json,
+        parse and return it. Otherwise, assume it is a simple string prompt
+        and return it in a list of dict.
+
+        Returns:
+            list of dict
+        """
+        return create_prompts_list(self.prompt)
+
+    @prompts.setter
+    def prompts(self, value):
+        """
+        Serialize the prompts and save to prompt field.
+
+        Args:
+            value (list of dict): The prompts to set.
+        """
+
+        if value is None:
+            self.prompt = None
+        elif len(value) == 1:
+            # For backwards compatibility. To be removed after all code
+            # is migrated to use prompts property instead of prompt field.
+            self.prompt = value[0]['description']
+        else:
+            self.prompt = json.dumps(value)
 
     @property
     def valid_assessments(self):
@@ -448,10 +525,11 @@ class OpenAssessmentBlock(
             list
 
         """
-        return [
+        _valid_assessments = [
             asmnt for asmnt in self.rubric_assessments
             if asmnt.get('name') in VALID_ASSESSMENT_TYPES
         ]
+        return update_assessments_format(copy.deepcopy(_valid_assessments))
 
     @property
     def assessment_steps(self):
@@ -589,6 +667,10 @@ class OpenAssessmentBlock(
             course_staff = self.is_course_staff
         if course_staff:
             return False, None, DISTANT_PAST, DISTANT_FUTURE
+
+        if self.is_beta_tester:
+            beta_start = self._adjust_start_date_for_beta_testers(open_range[0])
+            open_range = (beta_start, open_range[1])
 
         # Check if we are in the open date range
         now = dt.datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -761,3 +843,18 @@ class OpenAssessmentBlock(
             return key.to_deprecated_string()
         else:
             return unicode(key)
+
+    def get_username(self, anonymous_user_id):
+        if hasattr(self, "xmodule_runtime"):
+            return self.xmodule_runtime.get_real_user(anonymous_user_id).username
+
+    def _adjust_start_date_for_beta_testers(self, start):
+        if hasattr(self, "xmodule_runtime"):
+            days_early_for_beta = getattr(self.xmodule_runtime, 'days_early_for_beta', 0)
+            if days_early_for_beta is not None:
+                delta = dt.timedelta(days_early_for_beta)
+                effective = start - delta
+                return effective
+
+        return start
+
