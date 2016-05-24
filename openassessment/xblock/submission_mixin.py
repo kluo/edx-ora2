@@ -28,14 +28,6 @@ class SubmissionMixin(object):
     work outside the scope of OpenAssessmentBlock.
 
     """
-    
-    UPLOADABLE_MIME_TYPES = set([
-        'application/pdf',
-        'image/gif',
-        'image/jpeg',
-        'image/pjpeg',
-        'image/png',
-    ])
 
     @XBlock.json_handler
     def submit(self, data, suffix=''):
@@ -215,8 +207,8 @@ class SubmissionMixin(object):
             return {'success': False, 'msg': self._(u"Must specify contentType.")}
         content_type = data['contentType']
 
-        if not content_type in self.UPLOADABLE_MIME_TYPES:
-            return {'success': False, 'msg': self._(u"Content type must be an image or a PDF.")}
+        if not content_type.startswith('image/'):
+            return {'success': False, 'msg': self._(u"contentType must be an image.")}
 
         try:
             key = self._get_student_item_key()
