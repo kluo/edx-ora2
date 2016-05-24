@@ -215,7 +215,7 @@ class SubmissionMixin(object):
             return {'success': False, 'msg': self._(u"Must specify contentType.")}
         content_type = data['contentType']
 
-        if not content_type in self.UPLOADABLE_MIME_TYPES:
+        if not content_type in UPLOADABLE_MIME_TYPES:
             return {'success': False, 'msg': self._(u"Content type must be an image or a PDF.")}
 
         try:
