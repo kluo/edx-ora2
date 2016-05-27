@@ -442,7 +442,7 @@ class TestCourseStaff(XBlockHandlerTestCase):
 
     @patch('openassessment.assessment.api.peer.get_data_for_override_score')
     @scenario('data/example_based_assessment.xml', user_id='Bob')
-    def test_staff_debug_student_info_override_no_score(self, xblock, mock_score_data):
+    def test_staff_area_student_info_override_no_score(self, xblock, mock_score_data):
 
         mock_score_data.return_value = {
             'points_possible': 10,
@@ -456,7 +456,7 @@ class TestCourseStaff(XBlockHandlerTestCase):
 
     @patch('openassessment.assessment.api.peer.get_data_for_override_score')
     @scenario('data/example_based_assessment.xml', user_id='Bob')
-    def test_staff_debug_student_info_override_score(self, xblock, mock_score_data):
+    def test_staff_area_student_info_override_score(self, xblock, mock_score_data):
 
         mock_score_data.return_value = {
             'points_possible': 10,
@@ -475,7 +475,7 @@ class TestCourseStaff(XBlockHandlerTestCase):
     @patch.object(OpenAssessmentBlock, 'is_closed')
     @patch('openassessment.assessment.api.peer.get_data_for_override_score')
     @scenario('data/example_based_assessment.xml', user_id='Bob')
-    def test_staff_debug_student_info_override_closed(self, xblock, mock_score_data, mock_is_closed):
+    def test_staff_area_student_info_override_closed(self, xblock, mock_score_data, mock_is_closed):
 
         mock_score_data.return_value = {
             'points_possible': 10,
