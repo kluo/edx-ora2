@@ -52,16 +52,12 @@
                     <article class="peer-assessment" id="peer-assessment--001">
                         <div class="peer-assessment__display">
                             <header class="peer-assessment__display__header">
-                                {% if track_changes %}<input id="track_changes_clear_button" type="button" value="Clear Changes" />{% endif %}
                                 <h3 class="peer-assessment__display__title">{% trans "Assessment #" %}
                                     <span class="peer-assessment__number--current">{{ review_num }}</span> of
                                     <span class="peer-assessment__number--required">{{ must_grade }}</span>
                                 </h3>
                             </header>
 
-                            <div class="peer-assessment__display__response" {% if track_changes %} id="track-changes-content" contenteditable="true" {% endif %}>
-                                {{ peer_submission.answer.text|linebreaks }}
-                            </div>
                             {% include "openassessmentblock/oa_submission_answer.html" with answer=peer_submission.answer answer_text_label="Your peer's response to the question above:" %}
 
                             {% include "openassessmentblock/oa_uploaded_file.html" with file_upload_type=file_upload_type file_url=peer_file_url header="Associated File" class_prefix="peer-assessment" show_warning="true" %}

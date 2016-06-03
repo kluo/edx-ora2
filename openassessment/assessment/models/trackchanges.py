@@ -3,7 +3,7 @@ TrackChanges models used as part of the (optional) "Track Changes" feature,
 which allows basic collaborative editing of student submissions.
 
 NOTE: If you make any edits to this file, you can generate migrations using:
-    ./manage.py schemamigration openassessment.assessment --auto
+    ./manage.py makemigrations openassessment.assessment
 """
 import logging
 
@@ -30,6 +30,7 @@ class TrackChanges(models.Model):
             "owner_submission_uuid": self.owner_submission_uuid,
             "scorer_id": self.scorer_id,
             "edited_content": self.edited_content,
+            "json_edited_content": self.json_edited_content,
             "id": self.id,
         }
 
