@@ -21,7 +21,7 @@
 
     function clearChangesHandler(e) {
         var suffix = this.id.split('_').pop();
-        if (confirm('Are you sure you want to clear your changes?')) {
+        if (window.confirm('Are you sure you want to clear your changes?')) {
             e.data.trackers[suffix].rejectAll();
         }
     }
@@ -30,7 +30,6 @@
         var tracker;
         var $ = window.jQuery;
         var ice = window.ice;
-        var confirm = window.confirm;
         var element;
         var elements = document.querySelectorAll('[id^=track-changes-content_]');
         var trackers = [];
