@@ -107,7 +107,7 @@ OpenAssessment.PeerView.prototype = {
         // Initialize track changes
       var trackChangesSelector = $('[id^=track-changes-content_]', this.element);
       if (trackChangesSelector.size() > 0) {
-          for (index = 0; index < trackChangesSelector.length; index++) {
+          for (var index = 0; index < trackChangesSelector.length; index++) {
               var trackChangesElement = trackChangesSelector.get(index);
               this.trackChangesView = new OpenAssessment.TrackChangesView(trackChangesElement);
               this.trackChangesContent.push(this.trackChangesView);

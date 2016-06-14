@@ -19,20 +19,27 @@
         this.content = null;
     }
 
+    function clearChangesHandler(e) {
+        var suffix = this.id.split('_').pop();
+        if (confirm('Are you sure you want to clear your changes?')) {
+            e.data.trackers[suffix].rejectAll();
+        }
+    }
+
     TrackChangesView.prototype.enableTrackChanges = function enableTrackChanges() {
         var tracker;
         var $ = window.jQuery;
         var ice = window.ice;
         var confirm = window.confirm;
         var element;
-        var elements = document.querySelectorAll('[id^=track-changes-content_]')
-        var trackers = []
+        var elements = document.querySelectorAll('[id^=track-changes-content_]');
+        var trackers = [];
 
         if (!elements) {
             return;
         }
         
-        for (index = 0; index < elements.length; index++) {
+        for (var index = 0; index < elements.length; index++) {
             element = elements[index];
             
             tracker = new ice.InlineChangeEditor({
@@ -53,12 +60,7 @@
             tracker.startTracking();
             trackers.push(tracker);
 
-            $('#track_changes_clear_button_' + index).click(function () {
-            	var suffix = this.id.split('_').pop();
-                if (confirm('Are you sure you want to clear your changes?')) {
-                    trackers[suffix].rejectAll();
-                }
-            });
+            $('#track_changes_clear_button_' + index).click({trackers: trackers}, clearChangesHandler);
         }
     };
 
@@ -67,10 +69,10 @@
         var $ = window.jQuery;
         var changeTracking = $('#openassessment__peer-assessment');
         var editedContents = [];
-        var trackChangesContent = $('[id^=track-changes-content_]');
+        var trackChangesContent = $('[id^=track-changes-content_]', changeTracking);
         
         if (trackChangesContent.size() > 0) {
-            for (index = 0; index < trackChangesContent.length; index++) {
+            for (var index = 0; index < trackChangesContent.length; index++) {
                 var editedContentHtml = trackChangesContent.get(index).innerHTML;
         
                 editedContents.push(editedContentHtml);
