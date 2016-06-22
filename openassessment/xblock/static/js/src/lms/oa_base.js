@@ -101,14 +101,14 @@ OpenAssessment.BaseView.prototype = {
     /**
     Enable TrackChanges
     **/
-    enableTrackChangesView: function () {
+    enableTrackChangesView: function() {
         this.trackChangesView.enableTrackChanges();
     },
 
     /**
     Display TrackChanges View
     **/
-    displayTrackChangesView: function () {
+    displayTrackChangesView: function() {
         this.trackChangesView.displayTrackChanges();
     },
 

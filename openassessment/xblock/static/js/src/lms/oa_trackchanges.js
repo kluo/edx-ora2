@@ -1,4 +1,4 @@
-(function (window) {
+(function(window) {
     'use strict';
     /**
     Interface for TrackChanges assessment view.
@@ -37,14 +37,14 @@
         if (!elements) {
             return;
         }
-        
+
         for (var index = 0; index < elements.length; index++) {
             element = elements[index];
-            
+
             tracker = new ice.InlineChangeEditor({
                 element: element,
                 handleEvents: true,
-                currentUser: { id: 1, name: 'Reviewer' },
+                currentUser: {id: 1, name: 'Reviewer'},
                 plugins: [
                     {
                         // Track content that is cut and pasted
@@ -63,23 +63,21 @@
         }
     };
 
-    
     TrackChangesView.prototype.getEditedContent = function getEditedContent() {
         var $ = window.jQuery;
         var changeTracking = $('#openassessment__peer-assessment');
         var editedContents = [];
         var trackChangesContent = $('[id^=track-changes-content_]', changeTracking);
-        
+
         if (trackChangesContent.size() > 0) {
             for (var index = 0; index < trackChangesContent.length; index++) {
                 var editedContentHtml = trackChangesContent.get(index).innerHTML;
-        
+
                 editedContents.push(editedContentHtml);
             }
         }
         return editedContents;
     };
-   
 
     TrackChangesView.prototype.displayTrackChanges = function displayTrackChanges() {
         var view = this;
@@ -91,14 +89,14 @@
             .insertBefore(gradingTitleHeader)
             .wrap("<div class='submission__answer__display__content__peeredit__select'>");
         $('<span>Show response with: </span>').insertBefore(peerEditSelect);
-        $(editedResponse).each(function () {
+        $(editedResponse).each(function() {
             var peerNumber = $(this).data('peer-num');
             $('<span class="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</span>")
                 .appendTo(gradingTitleHeader).hide();
             $('<option value="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</option>")
                 .appendTo(peerEditSelect);
         });
-        $(peerEditSelect).change(function () {
+        $(peerEditSelect).change(function() {
             var valueSelected = $(':selected', this).val();
             $('.submission__answer__display__title span', view.element).hide();
             $('.submission__answer__display__title', view.element).children('.' + valueSelected).show();

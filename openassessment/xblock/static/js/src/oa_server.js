@@ -136,7 +136,7 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
 
         /**
          Submit a grade to override the peer assessment grade for this student.
-         
+
         Args:
             student_username (string): The username of the student.
             points_override (string): The points input by the instructor to override the peer grade.

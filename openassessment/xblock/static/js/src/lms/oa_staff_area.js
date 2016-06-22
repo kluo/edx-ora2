@@ -93,7 +93,7 @@
                     $('#openassessment_points_override', this.element).text(pointsOverride);
                 }
             ).fail(function(errMsg) {
-                    $('#openassessment_points_override', this.element).text(errMsg);
+                $('#openassessment_points_override', this.element).text(errMsg);
             });
         },
 
@@ -113,8 +113,8 @@
             // Click handler for overriding a student's peer score.
             sel.find('#submit_override_score').click(
                     function(eventObject) {
-                            eventObject.preventDefault();
-                            view.overridePeerScore();
+                        eventObject.preventDefault();
+                        view.overridePeerScore();
                     }
             );
         },
