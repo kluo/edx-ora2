@@ -1405,20 +1405,22 @@
                 "start": "2014-02-27T09:46:28",
                 "due": "2014-03-01T00:00:00",
                 "must_grade": 5,
-                "must_be_graded_by": 3
+                "must_be_graded_by": 3,
+                "track_changes": ""
             },
             {
                 "name": "self-assessment",
                 "start": "2014-04-01T00:00:00",
-                "due": "2014-06-01T00:00:00"
+                "due": "2014-06-01T00:00:00",
+                "track_changes": ""
             }
         ],
         "expected_xml": [
             "<openassessment>",
             "<title>Foo</title>",
             "<assessments>",
-                "<assessment name=\"peer-assessment\" start=\"2014-02-27T09:46:28\" due=\"2014-03-01T00:00:00\" must_grade=\"5\" must_be_graded_by=\"3\" />",
-                "<assessment name=\"self-assessment\" start=\"2014-04-01T00:00:00\" due=\"2014-06-01T00:00:00\" />",
+                "<assessment name=\"peer-assessment\" start=\"2014-02-27T09:46:28\" due=\"2014-03-01T00:00:00\" must_grade=\"5\" must_be_graded_by=\"3\" track_changes=\"\" />",
+                "<assessment name=\"self-assessment\" start=\"2014-04-01T00:00:00\" due=\"2014-06-01T00:00:00\" track_changes=\"\" />",
             "</assessments>",
             "<prompts>",
                 "<prompt><description>Test prompt</description></prompt>",

@@ -10,6 +10,7 @@ import dateutil.parser
 import defusedxml.ElementTree as safe_etree
 from data_conversion import update_assessments_format
 from defaults import DEFAULT_RUBRIC_FEEDBACK_TEXT
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 
 logger = logging.getLogger(__name__)
@@ -579,8 +580,12 @@ def parse_assessments_xml(assessments_root):
             track_changes_url = assessment.get('track_changes', '')
             assessment_dict['track_changes'] = track_changes_url
 
-            if track_changes_url and not URLValidator.regex.match(track_changes_url):
-                raise UpdateFromXmlError('The "track_changes" value must be an URL string')
+            validator = URLValidator()
+            if track_changes_url:
+                try:
+                    validator(track_changes_url)
+                except DjangoValidationError:
+                    raise UpdateFromXmlError('The "track_changes" value must be an URL string')
 
         # Training examples
         examples = assessment.findall('example')
