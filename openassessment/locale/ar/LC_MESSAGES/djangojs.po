@@ -91,7 +91,7 @@ msgstr "لم يمكن استرجاع رابط التنزيل."
 #: openassessment/xblock/static/js/openassessment-studio.min.js:1
 #: openassessment/xblock/static/js/src/oa_server.js:573
 msgid "The submission could not be removed from the grading pool."
-msgstr ""
+msgstr "تعذّرت إزالة التقديم من مجموعة التقييم."
 
 #: openassessment/xblock/static/js/openassessment-lms.min.js:1
 #: openassessment/xblock/static/js/src/lms/oa_base.js:148
@@ -137,7 +137,7 @@ msgstr "خطأ"
 msgid ""
 "You're about to submit your response for this assignment. After you submit "
 "this response, you can't change it or submit a new response."
-msgstr ""
+msgstr "إنّت على وشك تقديم إجابتك عن هذا الواحب. لن تتمكّن، بعد تقديم إجابتك، من تعديلها أو تقديم إجابة جديدة."
 
 #: openassessment/xblock/static/js/openassessment-lms.min.js:1
 #: openassessment/xblock/static/js/src/lms/oa_response.js:478

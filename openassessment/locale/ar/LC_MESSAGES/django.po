@@ -1549,7 +1549,7 @@ msgstr "ردّك على السؤال أعلاه."
 
 #: openassessment/templates/openassessmentblock/response/oa_response.html:69
 msgid "Enter your response to the question above."
-msgstr ""
+msgstr "يُرجى إدخال ردّك على السؤال المبيّن أعلاه"
 
 #: openassessment/templates/openassessmentblock/response/oa_response.html:79
 msgid "We could not upload this image"
