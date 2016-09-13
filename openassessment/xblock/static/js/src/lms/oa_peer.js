@@ -17,7 +17,6 @@ OpenAssessment.PeerView = function(element, server, baseView) {
     this.trackChangesView = new OpenAssessment.TrackChangesView(this.element, this.server, this);
 };
 
-
 OpenAssessment.PeerView.prototype = {
 
     /**
@@ -32,7 +31,7 @@ OpenAssessment.PeerView.prototype = {
                 view.server.renderLatex($('#openassessment__peer-assessment', view.element));
                 view.installHandlers(false);
             }
-        ).fail(function(errMsg) {
+        ).fail(function() {
             view.baseView.showLoadError('peer-assessment');
         });
         // Called to update Messagview with info on whether or not it was able to grab a submission
@@ -56,7 +55,7 @@ OpenAssessment.PeerView.prototype = {
                 view.server.renderLatex($('#openassessment__peer-assessment', view.element));
                 view.installHandlers(true);
             }
-        ).fail(function(errMsg) {
+        ).fail(function() {
             view.baseView.showLoadError('peer-assessment');
             view.continueAssessmentEnabled(true);
         });
@@ -106,16 +105,16 @@ OpenAssessment.PeerView.prototype = {
         }
 
         // Initialize track changes
-      var trackChangesSelector = $('[id^=track-changes-content_]', this.element);
-      if (trackChangesSelector.size() > 0) {
-          for (index = 0; index < trackChangesSelector.length; index++) {
-              var trackChangesElement = trackChangesSelector.get(index);
-              this.trackChangesView = new OpenAssessment.TrackChangesView(trackChangesElement);
-              this.trackChangesContent.push(this.trackChangesView);
-          }
-          view.baseView.enableTrackChangesView();
-      }   
-      
+        var trackChangesSelector = $('[id^=track-changes-content_]', this.element);
+        if (trackChangesSelector.size() > 0) {
+            for (var index = 0; index < trackChangesSelector.length; index++) {
+                var trackChangesElement = trackChangesSelector.get(index);
+                this.trackChangesView = new OpenAssessment.TrackChangesView(trackChangesElement);
+                this.trackChangesContent.push(this.trackChangesView);
+            }
+            view.baseView.enableTrackChangesView();
+        }
+
         // Install a change handler for rubric options to enable/disable the submit button
         if (this.rubric !== null) {
             this.rubric.canSubmitCallback($.proxy(view.peerSubmitEnabled, view));
@@ -197,7 +196,7 @@ OpenAssessment.PeerView.prototype = {
     Common peer assessment request building, used for all types of peer assessments.
 
     Args:
-        successFunction (function): The function called if the request is
+        successfunction(function): The function called if the request is
             successful. This varies based on the type of request to submit
             a peer assessment.
 
@@ -226,7 +225,5 @@ OpenAssessment.PeerView.prototype = {
             view.baseView.toggleActionError('peer', errMsg);
             view.peerSubmitEnabled(true);
         });
-    },
-
-
+    }
 };

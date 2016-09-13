@@ -1,4 +1,4 @@
-(function (window) {
+(function(window) {
     'use strict';
     /**
     Interface for TrackChanges assessment view.
@@ -19,26 +19,32 @@
         this.content = null;
     }
 
+    function clearChangesHandler(e) {
+        var suffix = this.id.split('_').pop();
+        if (window.confirm('Are you sure you want to clear your changes?')) {
+            e.data.trackers[suffix].rejectAll();
+        }
+    }
+
     TrackChangesView.prototype.enableTrackChanges = function enableTrackChanges() {
         var tracker;
         var $ = window.jQuery;
         var ice = window.ice;
-        var confirm = window.confirm;
         var element;
-        var elements = document.querySelectorAll('[id^=track-changes-content_]')
-        var trackers = []
+        var elements = document.querySelectorAll('[id^=track-changes-content_]');
+        var trackers = [];
 
         if (!elements) {
             return;
         }
-        
-        for (index = 0; index < elements.length; index++) {
+
+        for (var index = 0; index < elements.length; index++) {
             element = elements[index];
-            
+
             tracker = new ice.InlineChangeEditor({
                 element: element,
                 handleEvents: true,
-                currentUser: { id: 1, name: 'Reviewer' },
+                currentUser: {id: 1, name: 'Reviewer'},
                 plugins: [
                     {
                         // Track content that is cut and pasted
@@ -53,32 +59,25 @@
             tracker.startTracking();
             trackers.push(tracker);
 
-            $('#track_changes_clear_button_' + index).click(function () {
-            	var suffix = this.id.split('_').pop();
-                if (confirm('Are you sure you want to clear your changes?')) {
-                    trackers[suffix].rejectAll();
-                }
-            });
+            $('#track_changes_clear_button_' + index).click({trackers: trackers}, clearChangesHandler);
         }
     };
 
-    
     TrackChangesView.prototype.getEditedContent = function getEditedContent() {
         var $ = window.jQuery;
         var changeTracking = $('#openassessment__peer-assessment');
         var editedContents = [];
-        var trackChangesContent = $('[id^=track-changes-content_]');
-        
+        var trackChangesContent = $('[id^=track-changes-content_]', changeTracking);
+
         if (trackChangesContent.size() > 0) {
-            for (index = 0; index < trackChangesContent.length; index++) {
+            for (var index = 0; index < trackChangesContent.length; index++) {
                 var editedContentHtml = trackChangesContent.get(index).innerHTML;
-        
+
                 editedContents.push(editedContentHtml);
             }
         }
         return editedContents;
     };
-   
 
     TrackChangesView.prototype.displayTrackChanges = function displayTrackChanges() {
         var view = this;
@@ -90,14 +89,14 @@
             .insertBefore(gradingTitleHeader)
             .wrap("<div class='submission__answer__display__content__peeredit__select'>");
         $('<span>Show response with: </span>').insertBefore(peerEditSelect);
-        $(editedResponse).each(function () {
+        $(editedResponse).each(function() {
             var peerNumber = $(this).data('peer-num');
             $('<span class="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</span>")
                 .appendTo(gradingTitleHeader).hide();
             $('<option value="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</option>")
                 .appendTo(peerEditSelect);
         });
-        $(peerEditSelect).change(function () {
+        $(peerEditSelect).change(function() {
             var valueSelected = $(':selected', this).val();
             $('.submission__answer__display__title span', view.element).hide();
             $('.submission__answer__display__title', view.element).children('.' + valueSelected).show();
