@@ -15,7 +15,6 @@ OpenAssessment.GradeView = function(element, server, baseView) {
     this.baseView = baseView;
 };
 
-
 OpenAssessment.GradeView.prototype = {
     /**
     Load the grade view.
@@ -106,7 +105,7 @@ OpenAssessment.GradeView.prototype = {
         if (typeof options === 'undefined') {
             return $.map(
                 $('.feedback__overall__value:checked', view.element),
-                function(element, index) { return $(element).val(); }
+                function(element) { return $(element).val(); }
             );
         } else {
             // Uncheck all the options
@@ -144,7 +143,7 @@ OpenAssessment.GradeView.prototype = {
         boolean
     **/
     isHidden: function(sel) {
-        return sel.hasClass('is--hidden') && sel.attr('aria-hidden') == 'true';
+        return sel.hasClass('is--hidden') && sel.attr('aria-hidden') === 'true';
     },
 
     /**
@@ -207,7 +206,7 @@ OpenAssessment.GradeView.prototype = {
         }
 
         else {
-            if (newState == 'open') {
+            if (newState === 'open') {
                 containerSel.toggleClass('is--transitioning', false);
                 containerSel.toggleClass('is--submitting', false);
                 containerSel.toggleClass('is--submitted', false);
@@ -218,7 +217,7 @@ OpenAssessment.GradeView.prototype = {
                 this.setHidden(messageSel, true);
             }
 
-            else if (newState == 'submitting') {
+            else if (newState === 'submitting') {
                 containerSel.toggleClass('is--transitioning', true);
                 containerSel.toggleClass('is--submitting', true);
                 containerSel.toggleClass('is--submitted', false);
@@ -229,7 +228,7 @@ OpenAssessment.GradeView.prototype = {
                 this.setHidden(messageSel, true);
             }
 
-            else if (newState == 'submitted') {
+            else if (newState === 'submitted') {
                 containerSel.toggleClass('is--transitioning', false);
                 containerSel.toggleClass('is--submitting', false);
                 containerSel.toggleClass('is--submitted', true);

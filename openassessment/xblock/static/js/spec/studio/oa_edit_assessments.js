@@ -175,7 +175,7 @@ describe("OpenAssessment edit assessment views", function() {
         });
 
         it("enables and disables", function() { testEnableAndDisable(view); });
-        it("loads a description", function () {
+        it("loads a description", function() {
             // This assumes a particular structure of the DOM,
             // which is set by the HTML fixture.
             expect(view.description()).toEqual({
@@ -193,7 +193,7 @@ describe("OpenAssessment edit assessment views", function() {
             });
         });
 
-        it("modifies a description", function () {
+        it("modifies a description", function() {
             view.exampleContainer.add();
             expect(view.description()).toEqual({
                 examples: [
