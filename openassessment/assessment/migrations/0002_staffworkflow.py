@@ -8,7 +8,7 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0001_initial'),
+        ('assessment', '0004_edited_content_migration'),
     ]
 
     operations = [
