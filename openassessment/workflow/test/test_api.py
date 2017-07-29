@@ -74,7 +74,6 @@ class TestAssessmentWorkflowApi(CacheResetTest):
         self.assertEqual(
             workflow_keys,
             {
-                'override_score',
                 'submission_uuid', 'uuid', 'status', 'created', 'modified', 'score'
             }
         )
@@ -167,7 +166,6 @@ class TestAssessmentWorkflowApi(CacheResetTest):
         self.assertEqual(
             workflow_keys,
             {
-                'override_score',
                 'submission_uuid', 'uuid', 'status', 'created', 'modified', 'score'
             }
         )
