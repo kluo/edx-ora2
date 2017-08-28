@@ -53,13 +53,10 @@ class GradeMixin(object):
         context = {}
 
         # Render the grading section based on the status of the workflow
-        # but give precedence to showing the override score if it is set.
         try:
             if status == "cancelled":
                 path = 'openassessmentblock/grade/oa_grade_cancelled.html'
                 context = {'score': workflow['score']}
-            elif workflow.get('override_score'):
-                path, context = self.render_grade_override(workflow['override_score'])
             elif status == "done":
                 path, context = self.render_grade_complete(workflow)
             elif status == "waiting":
@@ -209,28 +206,6 @@ class GradeMixin(object):
         return (
             'openassessmentblock/grade/oa_grade_incomplete.html',
             {'incomplete_steps': incomplete_steps}
-        )
-
-    def render_grade_override(self, override_score):
-        """
-        Render the override points and points possible.
-
-        Args:
-            override_score (dict): Part of the serialized Workflow model.
-
-        Returns:
-            tuple of template path (string), context (dict)
-        """
-
-        context = {
-            'score': {
-                'points_possible': override_score['points_possible'],
-                'override_score': override_score['points_earned'],
-            },
-        }
-        return (
-            'openassessmentblock/grade/oa_grade_override.html',
-            context,
         )
 
     @XBlock.json_handler

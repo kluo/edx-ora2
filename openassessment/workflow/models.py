@@ -180,21 +180,6 @@ class AssessmentWorkflow(TimeStampedModel, StatusModel):
         """
         return sub_api.get_latest_score_for_submission(self.submission_uuid)
 
-    @property
-    def override_score(self):
-        """
-        Latest override score.
-        
-        Note an override score has no submission associated with it.
-        """
-
-        try:
-            submission_dict = sub_api.get_submission_and_student(self.submission_uuid)
-        except sub_api.SubmissionError:
-            return None
-        student_item = submission_dict['student_item']
-        return sub_api.get_score_override(student_item)
-
     def status_details(self, assessment_requirements):
         status_dict = {}
         steps = self._get_steps()

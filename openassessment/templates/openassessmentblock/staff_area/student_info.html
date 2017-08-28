@@ -130,37 +130,6 @@
         </div>
         {% endif %}
 
-        {% if problem_closed or scores.points_earned > -1 %}
-            {% if not workflow_cancellation %}
-                <div class="staff-info__status ui-staff__content__section">
-                    <h2 class="title">{% trans "Scores" %}</h2>
-                    <table class="staff-info__status__table">
-                        <thead>
-                        <tr>
-                            <th scope="col">{% trans "Peer Score" %}</th>
-                            <th scope="col">{% trans "Possible Score" %}</th>
-                            <th scope="col">{% trans "Override Score" %}</th>
-                        </tr>
-                        </thead>
-                
-                        <tbody>
-                            <tr>
-                                <td id="openassessment_points_earned" class="label">{{ scores.points_earned }}</td>
-                                <td id="openassessment_points_possible" class="label">{{ scores.points_possible }}</td>
-                                <td id="openassessment_points_override" class="label">{{ scores.points_override }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-            
-                    <form id="openassessment_override_score_form">
-                        <label class="label" for="openassessment_override_score">{% trans "Override Peer Score - set to" %}</label>
-                        <input id="openassessment_override_score" class="value" type="text" maxlength="3">
-                        <a aria-role="button" id="submit_override_score" class="action--submit"><span class="copy">{% trans "Submit" %}</span></a>
-                    </form>
-                </div>
-            {% endif %}
-        {% endif %}
-
         {% if submitted_assessments %}
         <div class="staff-info__status ui-staff__content__section">
             <h3 class="title">{% trans "Peer Assessments Completed by This Learner" %}</h3>
