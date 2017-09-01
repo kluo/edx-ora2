@@ -11,7 +11,7 @@
             </article>
             {% if track_changes %}<input id="track_changes_clear_button_{{ forloop.counter0 }}" type="button" value="Clear Changes" />{% endif %}
             <div class="submission__answer__part__text">
-                <h2 class="submission__answer__part__text__title">{% trans answer_text_label %}</h2>
+                <h2 class="submission__answer__part__text__title">{{ answer_text_label }}</h2>
                 <div class="submission__answer__part__text__value" {% if track_changes %} id="track-changes-content_{{ forloop.counter0 }}" contenteditable="true" {% endif %}>
                     {{ part.text|linebreaks }}
                 </div>
