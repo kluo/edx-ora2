@@ -65,7 +65,7 @@
 
     TrackChangesView.prototype.getEditedContent = function getEditedContent() {
         var $ = window.jQuery;
-        var changeTracking = $('#openassessment__peer-assessment');
+        var changeTracking = $('[id^=openassessment__peer-assessment__]');
         var editedContents = [];
         var trackChangesContent = $('[id^=track-changes-content_]', changeTracking);
 
@@ -83,7 +83,7 @@
         var view = this;
         var $ = window.jQuery;
         var editedResponse = $('.submission__answer__display__content.edited.part1', view.element);
-        var gradingTitleHeader = $('#openassessment__grade .submission__answer__display__title');
+        var gradingTitleHeader = $('[id^=openassessment__grade__] .submission__answer__display__title');
         gradingTitleHeader.wrapInner('<span class="original"></span>');
         var peerEditSelect = $('<select><option value="original">Your Unedited Submission</option></select>')
             .insertBefore(gradingTitleHeader)

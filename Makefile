@@ -35,7 +35,7 @@ javascript:
 
 
 sass:
-	./scripts/sass.sh
+	python scripts/compile_sass.py
 
 
 install-test:
@@ -45,14 +45,15 @@ install-sys-requirements: install-system install-node
 	npm config set loglevel warn
 
 install-dev:
-	gem install sass
 	pip install -q -r requirements/dev.txt
 
 install: install-wheels install-python install-js install-nltk-data install-test install-dev javascript sass
 
 quality:
-	jshint openassessment/xblock/static/js/src -c .jshintrc --verbose
+	./node_modules/.bin/jshint $(STATIC_JS)/src -c .jshintrc --verbose
 	./node_modules/jscs/bin/jscs openassessment/xblock/static/js/src --verbose
+	./scripts/run-pep8.sh
+	./scripts/run-pylint.sh
 
 test: quality test-python test-js
 

@@ -30,7 +30,7 @@ logger = logging.getLogger("openassessment.assessment.api.peer")
 PEER_TYPE = "PE"
 
 
-def submitter_is_finished(submission_uuid, requirements):
+def submitter_is_finished(submission_uuid, peer_requirements):
     """
     Check whether the submitter has made the required number of assessments.
 
@@ -40,30 +40,32 @@ def submitter_is_finished(submission_uuid, requirements):
 
     Args:
         submission_uuid (str): The UUID of the submission being tracked.
-        requirements (dict): Dictionary with the key "must_grade" indicating
+        peer_requirements (dict): Dictionary with the key "must_grade" indicating
             the required number of submissions the student must grade.
 
     Returns:
         bool
 
     """
-    if requirements is None:
+    if peer_requirements is None:
         return False
 
     try:
         workflow = PeerWorkflow.objects.get(submission_uuid=submission_uuid)
         if workflow.completed_at is not None:
             return True
-        elif workflow.num_peers_graded() >= requirements["must_grade"]:
+        elif workflow.num_peers_graded() >= peer_requirements["must_grade"]:
             workflow.completed_at = timezone.now()
             workflow.save()
             return True
         return False
     except PeerWorkflow.DoesNotExist:
         return False
+    except KeyError:
+        raise PeerAssessmentRequestError(u'Requirements dict must contain "must_grade" key')
 
 
-def assessment_is_finished(submission_uuid, requirements):
+def assessment_is_finished(submission_uuid, peer_requirements):
     """
     Check whether the submitter has received enough assessments
     to get a score.
@@ -74,7 +76,7 @@ def assessment_is_finished(submission_uuid, requirements):
 
     Args:
         submission_uuid (str): The UUID of the submission being tracked.
-        requirements (dict): Dictionary with the key "must_be_graded_by"
+        peer_requirements (dict): Dictionary with the key "must_be_graded_by"
             indicating the required number of assessments the student
             must receive to get a score.
 
@@ -82,7 +84,7 @@ def assessment_is_finished(submission_uuid, requirements):
 
         bool
     """
-    if requirements is None:
+    if not peer_requirements:
         return False
 
     workflow = PeerWorkflow.get_by_submission_uuid(submission_uuid)
@@ -93,7 +95,7 @@ def assessment_is_finished(submission_uuid, requirements):
         assessment__submission_uuid=submission_uuid,
         assessment__score_type=PEER_TYPE
     )
-    return scored_items.count() >= requirements["must_be_graded_by"]
+    return scored_items.count() >= peer_requirements["must_be_graded_by"]
 
 
 def on_start(submission_uuid):
@@ -115,14 +117,15 @@ def on_start(submission_uuid):
 
     """
     try:
-        submission = sub_api.get_submission_and_student(submission_uuid)
-        workflow, __ = PeerWorkflow.objects.get_or_create(
-            student_id=submission['student_item']['student_id'],
-            course_id=submission['student_item']['course_id'],
-            item_id=submission['student_item']['item_id'],
-            submission_uuid=submission_uuid
-        )
-        workflow.save()
+        with transaction.atomic():
+            submission = sub_api.get_submission_and_student(submission_uuid)
+            workflow, __ = PeerWorkflow.objects.get_or_create(
+                student_id=submission['student_item']['student_id'],
+                course_id=submission['student_item']['course_id'],
+                item_id=submission['student_item']['item_id'],
+                submission_uuid=submission_uuid
+            )
+            workflow.save()
     except IntegrityError:
         # If we get an integrity error, it means someone else has already
         # created a workflow for this submission, so we don't need to do anything.
@@ -137,7 +140,7 @@ def on_start(submission_uuid):
         raise PeerAssessmentInternalError(error_message)
 
 
-def get_score(submission_uuid, requirements):
+def get_score(submission_uuid, peer_requirements):
     """
     Retrieve a score for a submission if requirements have been satisfied.
 
@@ -148,14 +151,15 @@ def get_score(submission_uuid, requirements):
             must receive to get a score.
 
     Returns:
-        dict with keys "points_earned" and "points_possible".
+        A dictionary with the points earned, points possible, and
+        contributing_assessments information, along with a None staff_id.
 
     """
-    if requirements is None:
+    if peer_requirements is None:
         return None
 
     # User hasn't completed their own submission yet
-    if not submitter_is_finished(submission_uuid, requirements):
+    if not submitter_is_finished(submission_uuid, peer_requirements):
         return None
 
     workflow = PeerWorkflow.get_by_submission_uuid(submission_uuid)
@@ -170,7 +174,7 @@ def get_score(submission_uuid, requirements):
         assessment__score_type=PEER_TYPE
     ).order_by('-assessment')
 
-    submission_finished = items.count() >= requirements["must_be_graded_by"]
+    submission_finished = items.count() >= peer_requirements["must_be_graded_by"]
     if not submission_finished:
         return None
 
@@ -182,15 +186,18 @@ def get_score(submission_uuid, requirements):
     # which is not supported by some versions of MySQL.
     # Although this approach generates more database queries, the number is likely to
     # be relatively small (at least 1 and very likely less than 5).
-    for scored_item in items[:requirements["must_be_graded_by"]]:
+    for scored_item in items[:peer_requirements["must_be_graded_by"]]:
         scored_item.scored = True
         scored_item.save()
+    assessments = [item.assessment for item in items]
 
     return {
         "points_earned": sum(
             get_assessment_median_scores(submission_uuid).values()
         ),
-        "points_possible": items[0].assessment.points_possible,
+        "points_possible": assessments[0].points_possible,
+        "contributing_assessments": [assessment.id for assessment in assessments],
+        "staff_id": None,
     }
 
 
@@ -279,7 +286,7 @@ def create_assessment(
 
         if track_changes_edits:
             json_edited_content = serialize_edited_content(track_changes_edits)
-            
+
             change_tracker = TrackChanges(
                 scorer_id=scorer_id,
                 owner_submission_uuid=peer_submission_uuid,
@@ -298,16 +305,16 @@ def create_assessment(
         logger.exception(message)
         raise PeerAssessmentWorkflowError(message)
     except InvalidRubric:
-        msg = u"Rubric definition was not valid"
+        msg = u"The rubric definition is not valid."
         logger.exception(msg)
         raise PeerAssessmentRequestError(msg)
     except InvalidRubricSelection:
-        msg = u"Invalid options selected in the rubric"
+        msg = u"Invalid options were selected in the rubric."
         logger.warning(msg, exc_info=True)
         raise PeerAssessmentRequestError(msg)
     except DatabaseError:
         error_message = (
-            u"An error occurred while retrieving the peer workflow item by scorer with ID: {}"
+            u"An error occurred while creating an assessment by the scorer with this ID: {}"
         ).format(scorer_id)
         logger.exception(error_message)
         raise PeerAssessmentInternalError(error_message)
@@ -446,6 +453,8 @@ def get_assessment_median_scores(submission_uuid):
         assessments = [item.assessment for item in items]
         scores = Assessment.scores_by_criterion(assessments)
         return Assessment.get_median_score_dict(scores)
+    except PeerWorkflow.DoesNotExist:
+        return {}
     except DatabaseError:
         error_message = (
             u"Error getting assessment median scores for submission {uuid}"
@@ -494,7 +503,7 @@ def has_finished_required_evaluating(submission_uuid, required_assessments):
     return done, peers_graded
 
 
-def get_assessments(submission_uuid, scored_only=True, limit=None):
+def get_assessments(submission_uuid, limit=None):
     """Retrieve the assessments for a submission.
 
     Retrieves all the assessments for a submissions. This API returns related
@@ -506,9 +515,6 @@ def get_assessments(submission_uuid, scored_only=True, limit=None):
             associated with. Required.
 
     Keyword Arguments:
-        scored (boolean): Only retrieve the assessments used to generate a score
-            for this submission.
-
         limit (int): Limit the returned assessments. If None, returns all.
 
 
@@ -524,7 +530,7 @@ def get_assessments(submission_uuid, scored_only=True, limit=None):
             while retrieving the assessments associated with this submission.
 
     Examples:
-        >>> get_assessments("1", scored_only=True, limit=2)
+        >>> get_assessments("1", limit=2)
         [
             {
                 'points_earned': 6,
@@ -544,15 +550,10 @@ def get_assessments(submission_uuid, scored_only=True, limit=None):
 
     """
     try:
-        if scored_only:
-            assessments = PeerWorkflowItem.get_scored_assessments(
-                submission_uuid
-            )[:limit]
-        else:
-            assessments = Assessment.objects.filter(
-                submission_uuid=submission_uuid,
-                score_type=PEER_TYPE
-            )[:limit]
+        assessments = Assessment.objects.filter(
+            submission_uuid=submission_uuid,
+            score_type=PEER_TYPE
+        )[:limit]
         return serialize_assessments(assessments)
     except DatabaseError:
         error_message = (
@@ -562,7 +563,7 @@ def get_assessments(submission_uuid, scored_only=True, limit=None):
         raise PeerAssessmentInternalError(error_message)
 
 
-def get_submitted_assessments(submission_uuid, scored_only=True, limit=None):
+def get_submitted_assessments(submission_uuid, limit=None):
     """Retrieve the assessments created by the given submission's author.
 
     Retrieves all the assessments created by the given submission's author. This
@@ -575,8 +576,6 @@ def get_submitted_assessments(submission_uuid, scored_only=True, limit=None):
         we are requesting. Required.
 
     Keyword Arguments:
-        scored (boolean): Only retrieve the assessments used to generate a score
-            for this submission.
         limit (int): Limit the returned assessments. If None, returns all.
 
     Returns:
@@ -592,7 +591,7 @@ def get_submitted_assessments(submission_uuid, scored_only=True, limit=None):
             while retrieving the assessments associated with this submission.
 
     Examples:
-        >>> get_submitted_assessments("1", scored_only=True, limit=2)
+        >>> get_submitted_assessments("1", limit=2)
         [
             {
                 'points_earned': 6,
@@ -619,8 +618,6 @@ def get_submitted_assessments(submission_uuid, scored_only=True, limit=None):
             scorer=workflow,
             assessment__isnull=False
         )
-        if scored_only:
-            items = items.exclude(scored=False)
         assessments = Assessment.objects.filter(
             pk__in=[item.assessment.pk for item in items])[:limit]
         return serialize_assessments(assessments)
@@ -744,14 +741,15 @@ def create_peer_workflow(submission_uuid):
 
     """
     try:
-        submission = sub_api.get_submission_and_student(submission_uuid)
-        workflow, __ = PeerWorkflow.objects.get_or_create(
-            student_id=submission['student_item']['student_id'],
-            course_id=submission['student_item']['course_id'],
-            item_id=submission['student_item']['item_id'],
-            submission_uuid=submission_uuid
-        )
-        workflow.save()
+        with transaction.atomic():
+            submission = sub_api.get_submission_and_student(submission_uuid)
+            workflow, __ = PeerWorkflow.objects.get_or_create(
+                student_id=submission['student_item']['student_id'],
+                course_id=submission['student_item']['course_id'],
+                item_id=submission['student_item']['item_id'],
+                submission_uuid=submission_uuid
+            )
+            workflow.save()
     except IntegrityError:
         # If we get an integrity error, it means someone else has already
         # created a workflow for this submission, so we don't need to do anything.
@@ -1017,19 +1015,19 @@ def on_cancel(submission_uuid):
 
 def serialize_edited_content(track_changes_edits):
     """Serialize submission content with track changes.
-       
+
     Required now that multiple prompts are possible.
-       
+
     Args:
         track_change_edits (array): Content of assessment for each prompt with track changes.
-        
+
     Returns:
         json representation of content of assessment for each prompt with track changes.
     """
-    
+
     edited_content_array = []
     for edited_content in track_changes_edits:
         content_dict = {'text': edited_content}
         edited_content_array.append(content_dict)
-    
+
     return json.dumps({'parts': edited_content_array})
