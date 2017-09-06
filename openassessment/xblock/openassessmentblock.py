@@ -389,7 +389,7 @@ class OpenAssessmentBlock(
         track_changes_fragments = [x['track_changes'] for x in ui_models if x.get('track_changes', None)]
         if track_changes_fragments:
             for tr_frag in track_changes_fragments:
-                fragment.add_javascript_url(tr_frag) # TODO: move the URL to course advanced setting
+                fragment.add_javascript_url(tr_frag)  # TODO: move the URL to course advanced setting
             if settings.DEBUG:
                 fragment.add_css_url(self.runtime.local_resource_url(self, "static/css/trackchanges.css"))
             else:

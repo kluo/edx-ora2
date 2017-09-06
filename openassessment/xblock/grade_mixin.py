@@ -125,7 +125,7 @@ class GradeMixin(object):
 
         feedback_text = feedback.get('feedback', '') if feedback else ''
         student_submission = sub_api.get_submission(submission_uuid)
-        
+
         student_submission = create_submission_dict(student_submission, self.prompts)
 
         # For peer assessments add track changes peer edits to the student_submission.
@@ -590,8 +590,10 @@ class GradeMixin(object):
 
         # Get any track changes from the db and if there are some add them to the assessment dict for rendering.
         assessment['track_changes'] = None
-        track_changes = TrackChanges.objects.filter(scorer_id = assessment['scorer_id'],
-                owner_submission_uuid = assessment['submission_uuid'])
+        track_changes = TrackChanges.objects.filter(
+            scorer_id=assessment['scorer_id'],
+            owner_submission_uuid=assessment['submission_uuid'],
+        )
 
         if track_changes:
             assessment['track_changes'] = json.loads(track_changes.get().json_edited_content)

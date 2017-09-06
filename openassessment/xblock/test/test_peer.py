@@ -855,7 +855,7 @@ class TestPeerAssessHandler(XBlockHandlerTestCase):
         number_of_required_grades = 1
         track_changes_edits_hal = (u"Sally's answer 1" + u'<span class="ins"> is wrong!</span>',
                                    u"Sally's answer 2" + u'<span class="ins"> is wrong!</span>')
-      
+
         track_changes_edits_sally = (u"Hals answer 1" + u'<span class="ins"> is wrong!</span>',
                                      u"Hals answer 2" + u'<span class="ins"> is wrong!</span>')
 
@@ -903,4 +903,4 @@ class TestPeerAssessHandler(XBlockHandlerTestCase):
 
         # Validate Peer Rendering.
         self.assertTrue("Sally".encode('utf-8') in peer_response.body or
-            "Hal".encode('utf-8') in peer_response.body)
+                        "Hal".encode('utf-8') in peer_response.body)
