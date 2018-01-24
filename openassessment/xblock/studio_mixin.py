@@ -10,6 +10,7 @@ from xml import UpdateFromXmlError
 from django.conf import settings
 from django.template import Context
 from django.template.loader import get_template
+from django.utils.translation import ugettext as _, ugettext_lazy
 from voluptuous import MultipleInvalid
 from xblock.core import XBlock
 from xblock.fields import List, Scope
@@ -42,6 +43,12 @@ class StudioMixin(object):
             ]
         }
     ]
+
+    NECESSITY_OPTIONS = {
+        "required": ugettext_lazy("Required"),
+        "optional": ugettext_lazy("Optional"),
+        "": ugettext_lazy("None")
+    }
 
     # Since the XBlock problem definition contains only assessment
     # modules that are enabled, we need to keep track of the order
@@ -140,6 +147,9 @@ class StudioMixin(object):
             'track_changes': track_changes,
             'feedbackprompt': self.rubric_feedback_prompt,
             'feedback_default_text': feedback_default_text,
+            'text_response': self.text_response if self.text_response  else '',
+            'file_upload_response': self.file_upload_response if self.file_upload_response else '',
+            'necessity_options': self.NECESSITY_OPTIONS,
             'file_upload_type': self.file_upload_type,
             'white_listed_file_types': self.white_listed_file_types_string,
             'allow_latex': self.allow_latex,
@@ -190,6 +200,15 @@ class StudioMixin(object):
             else:
                 logger.exception('editor_assessments_order does not contain all expected assessment types')
                 return {'success': False, 'msg': self._('Error updating XBlock configuration')}
+
+        if not data['text_response'] and not data['file_upload_response']:
+            return {'success': False, 'msg': self._("Error: both text and file upload responses can't be disabled")}
+        if not data['text_response'] and data['file_upload_response'] == 'optional':
+            return {'success': False,
+                    'msg': self._("Error: in case if text response is disabled file upload response must be required")}
+        if not data['file_upload_response'] and data['text_response'] == 'optional':
+            return {'success': False,
+                    'msg': self._("Error: in case if file upload response is disabled text response must be required")}
 
         # Backwards compatibility: We used to treat "name" as both a user-facing label
         # and a unique identifier for criteria and options.
@@ -254,8 +273,14 @@ class StudioMixin(object):
         self.rubric_feedback_default_text = data['feedback_default_text']
         self.submission_start = data['submission_start']
         self.submission_due = data['submission_due']
-        self.file_upload_type = data['file_upload_type']
-        self.white_listed_file_types_string = data['white_listed_file_types']
+        self.text_response = data['text_response']
+        self.file_upload_response = data['file_upload_response']
+        if data['file_upload_response']:
+            self.file_upload_type = data['file_upload_type']
+            self.white_listed_file_types_string = data['white_listed_file_types']
+        else:
+            self.file_upload_type = None
+            self.white_listed_file_types_string = None
         self.allow_latex = bool(data['allow_latex'])
         self.leaderboard_show = data['leaderboard_show']
 

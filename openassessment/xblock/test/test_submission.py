@@ -25,7 +25,7 @@ from .base import XBlockHandlerTestCase, scenario
 
 class SubmissionTest(XBlockHandlerTestCase):
     SUBMISSION = json.dumps({
-        "submission": ["This is my answer to the first question!", "This is my answer to the second question!"]
+        "submission": ["This is my answer to the first prompt!", "This is my answer to the second prompt!"]
     })
 
     @scenario('data/basic_scenario.xml', user_id='Bob')
@@ -37,8 +37,8 @@ class SubmissionTest(XBlockHandlerTestCase):
     def test_submit_answer_too_long(self, xblock):
         # Maximum answer length is 100K, once the answer has been JSON-encoded
         long_submission = json.dumps({
-            "submission": ["This is my answer to the first question!" * 100000,
-                           "This is my answer to the second question!"]
+            "submission": ["This is my answer to the first prompt!" * 100000,
+                           "This is my answer to the second prompt!"]
         })
         resp = self.request(xblock, 'submit', long_submission, response_format='json')
         self.assertFalse(resp[0])
@@ -89,6 +89,31 @@ class SubmissionTest(XBlockHandlerTestCase):
         self.assertFalse(resp[0])
         self.assertEqual(resp[1], "ENOPREVIEW")
         self.assertIsNot(resp[2], None)
+
+    def _ability_to_submit_blank_answer(self, xblock):
+        """
+        Checks ability to submit blank answer if text response is not required
+
+        """
+        empty_submission = json.dumps({"submission": [""]})
+        resp = self.request(xblock, 'submit', empty_submission, response_format='json')
+        self.assertTrue(resp[0])
+
+    @scenario('data/text_response_optional.xml', user_id='Bob')
+    def test_ability_to_submit_blank_answer_if_text_response_optional(self, xblock):
+        """
+        Checks ability to submit blank answer if text response is optional
+
+        """
+        self._ability_to_submit_blank_answer(xblock)
+
+    @scenario('data/text_response_none.xml', user_id='Bob')
+    def test_ability_to_submit_blank_answer_if_text_response_none(self, xblock):
+        """
+        Checks ability to submit blank answer if text response is None
+
+        """
+        self._ability_to_submit_blank_answer(xblock)
 
     @scenario('data/over_grade_scenario.xml', user_id='Alice')
     def test_closed_submissions(self, xblock):
@@ -163,6 +188,62 @@ class SubmissionTest(XBlockHandlerTestCase):
         self.assertTrue(resp['success'])
         self.assertEqual(u'', resp['url'])
 
+    @mock_s3
+    @override_settings(
+        AWS_ACCESS_KEY_ID='foobar',
+        AWS_SECRET_ACCESS_KEY='bizbaz',
+        FILE_UPLOAD_STORAGE_BUCKET_NAME="mybucket"
+    )
+    @scenario('data/file_upload_scenario.xml')
+    def test_remove_all_uploaded_files(self, xblock):
+        """ Test remove all user files """
+        conn = boto.connect_s3()
+        bucket = conn.create_bucket('mybucket')
+        key = Key(bucket)
+        key.key = "submissions_attachments/test_student/test_course/" + xblock.scope_ids.usage_id
+        key.set_contents_from_string("How d'ya do?")
+
+        xblock.xmodule_runtime = Mock(
+            course_id='test_course',
+            anonymous_student_id='test_student',
+        )
+
+        download_url = api.get_download_url("test_student/test_course/" + xblock.scope_ids.usage_id)
+        resp = self.request(xblock, 'download_url', json.dumps(dict()), response_format='json')
+        self.assertTrue(resp['success'])
+        self.assertEqual(download_url, resp['url'])
+
+        resp = self.request(xblock, 'remove_all_uploaded_files', json.dumps(dict()), response_format='json')
+        self.assertTrue(resp['success'])
+        self.assertEqual(resp['removed_num'], 1)
+
+        resp = self.request(xblock, 'download_url', json.dumps(dict()), response_format='json')
+        self.assertTrue(resp['success'])
+        self.assertEqual(u'', resp['url'])
+
+    @mock_s3
+    @override_settings(
+        AWS_ACCESS_KEY_ID='foobar',
+        AWS_SECRET_ACCESS_KEY='bizbaz',
+        FILE_UPLOAD_STORAGE_BUCKET_NAME="mybucket"
+    )
+    @scenario('data/custom_file_upload.xml')
+    def test_upload_files_with_uppercase_ext(self, xblock):
+        """
+        Tests that files with upper case extention uploaded successfully
+        """
+        xblock.xmodule_runtime = Mock(
+            course_id='test_course',
+            anonymous_student_id='test_student',
+        )
+        resp = self.request(xblock, 'upload_url', json.dumps({'contentType': 'filename',
+                                                              'filename': 'test.PDF'}), response_format='json')
+        self.assertTrue(resp['success'])
+        self.assertTrue(resp['url'].startswith(
+            'https://mybucket.s3.amazonaws.com/submissions_attachments/test_student/test_course/' +
+            xblock.scope_ids.usage_id
+        ))
+
 
 class SubmissionRenderTest(XBlockHandlerTestCase):
     """
@@ -179,10 +260,13 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response_unavailable.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'submission_start': dt.datetime(4999, 4, 1).replace(tzinfo=pytz.utc),
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -201,11 +285,14 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
             xblock, 'openassessmentblock/response/oa_response_submitted.html',
             {
                 'student_submission': create_submission_dict(submission, xblock.prompts),
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'peer_incomplete': True,
                 'self_incomplete': True,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -214,6 +301,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'saved_response': create_submission_dict({
                     'answer': prepare_submission_for_serialization(
@@ -224,7 +313,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                 'submit_enabled': False,
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -233,6 +323,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'saved_response': create_submission_dict({
                     'answer': prepare_submission_for_serialization(
@@ -242,7 +334,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                 'save_status': 'This response has not been saved.',
                 'submit_enabled': False,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -256,6 +349,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'saved_response': create_submission_dict({
                     'answer': prepare_submission_for_serialization(
@@ -266,7 +361,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                 'submit_enabled': True,
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -280,6 +376,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'saved_response': create_submission_dict({
                     'answer': prepare_submission_for_serialization(
@@ -290,7 +388,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                 'submit_enabled': True,
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -305,11 +404,14 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
             {
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
                 'student_submission': create_submission_dict(submission, xblock.prompts),
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'peer_incomplete': True,
                 'self_incomplete': True,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -331,6 +433,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response_cancelled.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'allow_latex': False,
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
@@ -341,7 +445,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                     'cancelled_by_id': 'Bob',
                     'cancelled_by': mock_staff
                 },
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -363,11 +468,14 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
                 'student_submission': {"answer": {"parts": [
                     {"prompt": {'description': 'One prompt.'}, "text": "An old format response."}
                 ]}},
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'peer_incomplete': True,
                 'self_incomplete': True,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -376,10 +484,13 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
         self._assert_path_and_context(
             xblock, 'openassessmentblock/response/oa_response_closed.html',
             {
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'submission_due': dt.datetime(2014, 4, 5).replace(tzinfo=pytz.utc),
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -394,11 +505,14 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
             {
                 'submission_due': dt.datetime(2014, 4, 5).replace(tzinfo=pytz.utc),
                 'student_submission': create_submission_dict(submission, xblock.prompts),
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'peer_incomplete': False,
                 'self_incomplete': True,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -421,9 +535,12 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
             {
                 'submission_due': dt.datetime(2999, 5, 6).replace(tzinfo=pytz.utc),
                 'student_submission': create_submission_dict(submission, xblock.prompts),
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -446,9 +563,12 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
             {
                 'submission_due': dt.datetime(2014, 4, 5).replace(tzinfo=pytz.utc),
                 'student_submission': create_submission_dict(submission, xblock.prompts),
+                'text_response': 'required',
+                'file_upload_response': None,
                 'file_upload_type': None,
                 'allow_latex': False,
-                'time_zone': pytz.utc,
+                'user_timezone': None,
+                'user_language': None
             }
         )
 
@@ -456,8 +576,8 @@ class SubmissionRenderTest(XBlockHandlerTestCase):
     def test_integration(self, xblock):
         # Expect that the response step is open and displays the deadline
         resp = self.request(xblock, 'render_submission', json.dumps(dict()))
-        self.assertIn('Enter your response to the question', resp)
-        self.assertIn('Monday, May 6, 2999 00:00 UTC', resp)
+        self.assertIn('Enter your response to the prompt', resp)
+        self.assertIn('2999-05-06T00:00:00+00:00', resp)
 
         # Create a submission for the user
         xblock.create_submission(

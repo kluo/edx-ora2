@@ -199,14 +199,6 @@ def validate_rubric(rubric_dict, current_rubric, is_released, is_example_based, 
     except InvalidRubric:
         return False, _(u'This rubric definition is not valid.')
 
-    # No duplicate criteria names
-    duplicates = _duplicates([criterion['name'] for criterion in rubric_dict['criteria']])
-    if len(duplicates) > 0:
-        msg = _(u"Criteria duplicate name(s): {duplicates}").format(
-            duplicates=", ".join(duplicates)
-        )
-        return False, msg
-
     for criterion in rubric_dict['criteria']:
         # No duplicate option names within a criterion
         duplicates = _duplicates([option['name'] for option in criterion['options']])
@@ -386,7 +378,7 @@ def validator(oa_block, _, strict_post_release=True):
     return _inner
 
 
-def validate_submission(submission, prompts, _):
+def validate_submission(submission, prompts, _, text_response='required'):
     """
     Validate submission dict.
 
@@ -406,7 +398,7 @@ def validate_submission(submission, prompts, _):
     if type(submission) != list:
         return False, message
 
-    if len(submission) != len(prompts):
+    if text_response == 'required' and len(submission) != len(prompts):
         return False, message
 
     for submission_part in submission:
