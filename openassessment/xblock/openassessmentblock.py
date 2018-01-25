@@ -530,6 +530,7 @@ class OpenAssessmentBlock(MessageMixin,
             # minified additional_js should be already included in 'make javascript'
             fragment.add_javascript(load("static/js/openassessment-lms.min.js"))
 
+        ui_models = [UI_MODELS["submission"]]
         track_changes_fragments = [x['track_changes'] for x in ui_models if x.get('track_changes', None)]
         if track_changes_fragments:
             for tr_frag in track_changes_fragments:
