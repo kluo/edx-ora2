@@ -1,37 +1,38 @@
 {% spaceless %}
 {% load i18n %}
 
-<ol class="submission__answer__display__content__wrapper">
+<ol class="submission__answer__display__content">
 
     {% for part in answer.parts %}
         {% with part_num=forloop.counter %}
             <li class="submission__answer__part">
+                <div class="submission__answer__part__text">
+                    <h5 class="submission__answer__part__text__title">{% trans "The question for this section" %}</h5>
+                </div>
                 <article class="submission__answer__part__prompt">
-                    <h2 class="submission__answer__part__prompt__title">{% trans "The question for this section." %}</h2>
                     <div class="submission__answer__part__prompt__value">
                         {{ part.prompt.description|linebreaks }}
                     </div>
                 </article>
+                <div class="submission__answer__part__text">
+                    <h5 class="submission__answer__part__text__title submission__answer__response__title">{{ answer_text_label }}</h5>
+                    <div class="submission__answer__part__text__value original">
+                        {{ part.text|linebreaks }}
+                    </div>
+                    {% for track_changes in part.track_changes %}
+                        {% with peer_num=forloop.counter %}
+                            {% autoescape off %}
+                                <div class="submission__answer__part__text__value edited part{{ part_num }} peer{{ peer_num }}" data-peer-num="{{ peer_num }}">
+                                    {{ track_changes.text }}
+                                </div>
+                            {% endautoescape %}
+                        {% endwith %}
+                    {% endfor %}
+                </div>
             </li>
-    
-      
-            <div class="submission__answer__display__content original">
-                {{ part.text|linebreaks }}
-            </div>
-        
-    
-           {% for track_changes in part.track_changes %}
-               {% with peer_num=forloop.counter %}
-                   {% autoescape off %}
-                       <div class="submission__answer__display__content edited part{{ part_num }} peer{{ peer_num }}" data-peer-num="{{ peer_num }}">
-                           {{ track_changes.text }}
-                       </div>
-                   {% endautoescape %}
-               {% endwith %}
-           {% endfor %}
         {% endwith %}
-       
+
     {% endfor %}
-    
+
 </ol>
 {% endspaceless %}

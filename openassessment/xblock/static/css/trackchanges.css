@@ -1,11 +1,4 @@
-ol li.submission__answer__part {
-    list-style: none !important;
-}
-.submission__answer__display__content__peeredit__select {
-    display: block;
-    float: right;
-}
-.submission__answer__display__content.edited {
+.submission__answer__part__text__value.edited {
     display: none;
 }
 
