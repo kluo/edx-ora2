@@ -82,32 +82,30 @@
     TrackChangesView.prototype.displayTrackChanges = function displayTrackChanges() {
         var view = this;
         var $ = window.jQuery;
-        var editedResponse = $('.submission__answer__display__content.edited.part1', view.element);
-        var gradingTitleHeader = $('[id^=openassessment__grade__] .submission__answer__display__title');
-        gradingTitleHeader.wrapInner('<span class="original"></span>');
+        var editedResponse = $('.submission__answer__part__text__value.edited.part1', view.element);
+        var gradeContent = $('[id^=openassessment__grade__] .submission__answer__display__content');
         var peerEditSelect = $('<select><option value="original">Your Unedited Submission</option></select>')
-            .insertBefore(gradingTitleHeader)
+            .insertBefore(gradeContent)
             .wrap("<div class='submission__answer__display__content__peeredit__select'>");
-        $('<span>Show response with: </span>').insertBefore(peerEditSelect);
+        $('<span>Showing response with: </span>').insertBefore(peerEditSelect);
         $(editedResponse).each(function() {
             var peerNumber = $(this).data('peer-num');
-            $('<span class="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</span>")
-                .appendTo(gradingTitleHeader).hide();
             $('<option value="peer' + peerNumber + '">Peer ' + peerNumber + "'s Edits</option>")
                 .appendTo(peerEditSelect);
         });
+        var responseHeaders = $('[id^=openassessment__grade__] .submission__answer__response__title');
+        var originalAnswerLabel = responseHeaders.first().text();
         $(peerEditSelect).change(function() {
             var valueSelected = $(':selected', this).val();
-            $('.submission__answer__display__title span', view.element).hide();
-            $('.submission__answer__display__title', view.element).children('.' + valueSelected).show();
-
             if (valueSelected === 'original') {
-                $('.submission__answer__display__content.edited', view.element).hide();
-                $('.submission__answer__display__content.original', view.element).show();
+                responseHeaders.html(originalAnswerLabel);
+                $('.submission__answer__part__text__value.edited', view.element).hide();
+                $('.submission__answer__part__text__value.original', view.element).show();
             } else {
-                $('.submission__answer__display__content.original', view.element).hide();
-                $('.submission__answer__display__content.edited', view.element).hide();
-                $('.submission__answer__display__content.edited.' + valueSelected, view.element).show();
+                responseHeaders.html($(':selected', this).text());
+                $('.submission__answer__part__text__value.original', view.element).hide();
+                $('.submission__answer__part__text__value.edited', view.element).hide();
+                $('.submission__answer__part__text__value.edited.' + valueSelected, view.element).show();
             }
         });
     };

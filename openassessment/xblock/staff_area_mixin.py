@@ -24,6 +24,7 @@ from openassessment.assessment.api import self as self_api
 from openassessment.assessment.api import ai as ai_api
 from openassessment.workflow import api as workflow_api
 from openassessment.assessment.api import staff as staff_api
+from .user_data import get_user_preferences
 
 
 logger = logging.getLogger(__name__)
@@ -318,15 +319,19 @@ class StaffAreaMixin(object):
         Returns:
             A context dict for rendering a student submission and associated rubric (for staff grading).
         """
+        user_preferences = get_user_preferences(self.runtime.service(self, 'user')) # localize for staff user
+
         context = {
             'submission': create_submission_dict(submission, self.prompts) if submission else None,
             'rubric_criteria': copy.deepcopy(self.rubric_criteria_with_labels),
             'student_username': student_username,
+            'user_timezone': user_preferences['user_timezone'],
+            'user_language': user_preferences['user_language']
         }
 
         if submission:
             context["file_upload_type"] = self.file_upload_type
-            context["staff_file_url"] = self.get_download_url_from_submission(submission)
+            context["staff_file_urls"] = self.get_download_urls_from_submission(submission)
 
         if self.rubric_feedback_prompt is not None:
             context["rubric_feedback_prompt"] = self.rubric_feedback_prompt
