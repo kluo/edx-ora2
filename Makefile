@@ -81,3 +81,5 @@ update-npm-requirements:
 	npm update --silent
 	cp ./node_modules/backgrid/lib/backgrid*.js $(STATIC_JS)/lib/backgrid/
 	cp ./node_modules/backgrid/lib/backgrid*.css $(STATIC_CSS)/lib/backgrid/
+	sed -i 's/\["underscore"/"backgrid", &/' $(STATIC_JS)/lib/backgrid/backgrid.js
+	sed -i 's/\["underscore"/"backgrid",&/' $(STATIC_JS)/lib/backgrid/backgrid.min.js
