@@ -183,6 +183,12 @@ class OpenAssessmentBlock(MessageMixin,
         help="The type of prompt. html or text"
     )
 
+    track_changes = String(
+        default="",
+        scope=Scope.content,
+        help="URL to track changes library, currently ICE"
+    )
+
     rubric_criteria = List(
         default=DEFAULT_RUBRIC_CRITERIA,
         scope=Scope.content,
@@ -253,7 +259,7 @@ class OpenAssessmentBlock(MessageMixin,
         Backward compatibility for existing blocks that were created without text_response
         or file_upload_response fields. These blocks will be treated as required text.
         """
-        if not self.file_upload_response and not self.text_response_raw:
+        if not self.file_upload_response_raw and not self.text_response_raw:
             return 'required'
         else:
             return self.text_response_raw
@@ -526,6 +532,17 @@ class OpenAssessmentBlock(MessageMixin,
 
             # minified additional_js should be already included in 'make javascript'
             fragment.add_javascript(load("static/js/openassessment-lms.min.js"))
+
+        ui_models = self._create_ui_models()
+        track_changes_fragments = [x['track_changes'] for x in ui_models if x.get('track_changes', None)]
+        if track_changes_fragments:
+            for tr_frag in track_changes_fragments:
+                fragment.add_javascript_url(tr_frag)  # TODO: move the URL to course advanced setting
+            if settings.DEBUG:
+                fragment.add_css_url(self.runtime.local_resource_url(self, "static/css/trackchanges.css"))
+            else:
+                fragment.add_css(load("static/css/trackchanges.css"))
+
         js_context_dict = {
             "ALLOWED_IMAGE_MIME_TYPES": self.ALLOWED_IMAGE_MIME_TYPES,
             "ALLOWED_FILE_MIME_TYPES": self.ALLOWED_FILE_MIME_TYPES,
@@ -675,6 +692,10 @@ class OpenAssessmentBlock(MessageMixin,
             (
                 "OpenAssessmentBlock Promptless Rubric",
                 load('static/xml/promptless_rubric_example.xml')
+            ),
+            (
+                "OpenAssessmentBlock Track Changes",
+                load('static/xml/track_changes_example.xml')
             ),
         ]
 

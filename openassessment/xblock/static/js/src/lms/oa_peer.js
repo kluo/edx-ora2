@@ -14,6 +14,7 @@ OpenAssessment.PeerView = function(element, server, baseView) {
     this.server = server;
     this.baseView = baseView;
     this.rubric = null;
+    this.trackChangesView = new OpenAssessment.TrackChangesView(this.element, this.server, this);
     this.isRendering = false;
     this.announceStatus = false;
     this.dateFactory = new OpenAssessment.DateTimeFactory(this.element);
@@ -111,6 +112,7 @@ OpenAssessment.PeerView.prototype = {
     installHandlers: function(isContinuedAssessment) {
         var sel = $('.step--peer-assessment', this.element);
         var view = this;
+        this.trackChangesContent = [];
 
         // Install a click handler for collapse/expand
         this.baseView.setUpCollapseExpand(sel);
@@ -127,6 +129,17 @@ OpenAssessment.PeerView.prototype = {
         else {
             // If there was previously a rubric visible, clear the reference to it.
             this.rubric = null;
+        }
+
+        // Initialize track changes
+        var trackChangesSelector = $('[id^=track-changes-content_]', this.element);
+        if (trackChangesSelector.size() > 0) {
+            for (var index = 0; index < trackChangesSelector.length; index++) {
+                var trackChangesElement = trackChangesSelector.get(index);
+                this.trackChangesView = new OpenAssessment.TrackChangesView(trackChangesElement);
+                this.trackChangesContent.push(this.trackChangesView);
+            }
+            view.baseView.enableTrackChangesView();
         }
 
         // Install a change handler for rubric options to enable/disable the submit button
@@ -238,6 +251,10 @@ OpenAssessment.PeerView.prototype = {
     peerAssessRequest: function(successFunction) {
         var view = this;
         var uuid = this.getUUID();
+        var editedContent = '';
+        if (this.trackChangesContent) {
+            editedContent = this.trackChangesView.getEditedContent();
+        }
 
         view.baseView.toggleActionError('peer', null);
         view.peerSubmitEnabled(false);
@@ -247,7 +264,8 @@ OpenAssessment.PeerView.prototype = {
             this.rubric.optionsSelected(),
             this.rubric.criterionFeedback(),
             this.rubric.overallFeedback(),
-            uuid
+            uuid,
+            editedContent
         ).done(
             successFunction
         ).fail(function(errMsg) {

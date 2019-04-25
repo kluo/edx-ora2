@@ -2,14 +2,17 @@
 Grade step in the OpenAssessment XBlock.
 """
 import copy
+import json
 
 from lazy import lazy
 from xblock.core import XBlock
 
 from django.utils.translation import ugettext as _
 
+from data_conversion import add_trackchanges_to_submission_dict
 from data_conversion import create_submission_dict
 from openassessment.assessment.errors import PeerAssessmentError, SelfAssessmentError
+from openassessment.assessment.models import TrackChanges
 
 
 class GradeMixin(object):
@@ -120,6 +123,12 @@ class GradeMixin(object):
         feedback_text = feedback.get('feedback', '') if feedback else ''
         student_submission = sub_api.get_submission(submission_uuid)
 
+        student_submission = create_submission_dict(student_submission, self.prompts)
+
+        # For peer assessments add track changes peer edits to the student_submission.
+        if "peer-assessment" in assessment_steps:
+            student_submission = add_trackchanges_to_submission_dict(student_submission, peer_assessments)
+
         # We retrieve the score from the workflow, which in turn retrieves
         # the score for our current submission UUID.
         # We look up the score by submission UUID instead of student item
@@ -132,7 +141,7 @@ class GradeMixin(object):
             'score': score,
             'feedback_text': feedback_text,
             'has_submitted_feedback': has_submitted_feedback,
-            'student_submission': create_submission_dict(student_submission, self.prompts),
+            'student_submission': student_submission,
             'peer_assessments': peer_assessments,
             'grade_details': self.grade_details(
                 submission_uuid,
@@ -580,5 +589,15 @@ class GradeMixin(object):
                 if part.get('option') is not None:
                     option_label_key = (part['criterion']['name'], part['option']['name'])
                     part['option']['label'] = option_labels.get(option_label_key, part['option']['name'])
+
+        # Get any track changes from the db and if there are some add them to the assessment dict for rendering.
+        assessment['track_changes'] = None
+        track_changes = TrackChanges.objects.filter(
+            scorer_id=assessment['scorer_id'],
+            owner_submission_uuid=assessment['submission_uuid'],
+        )
+
+        if track_changes:
+            assessment['track_changes'] = json.loads(track_changes.get().json_edited_content)
 
         return assessment

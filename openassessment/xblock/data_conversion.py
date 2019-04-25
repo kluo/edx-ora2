@@ -251,3 +251,32 @@ def verify_assessment_parameters(func):
 
         return func(instance, data, suffix)
     return verify_and_call
+
+
+def add_trackchanges_to_submission_dict(submission, peer_assessments):
+    """
+    Adds any trackchange edits to the submission dict.
+    This is to facilitate easier handling in the render_grade_complete template.
+
+    Args:
+        submission (dict): Submission dictionary.
+        peer_assessments (list of dicts) Assessments.
+
+    Returns:
+        submission (dict)
+    """
+    prompt_array = []
+    if peer_assessments is not None:
+        for peer_assessment in peer_assessments:
+            if peer_assessment.get('track_changes', None):
+                prompt_array.append(peer_assessment['track_changes']['parts'])
+
+        # Transpose the matrix such that each peer's n'th edit is included in a list at the n'th element in the array.
+        prompt_array = zip(*prompt_array)
+
+        # Add track change edits for each part to the appropriate part in the submission dict.
+        if submission is not None and len(submission['answer']['parts']) == len(prompt_array):
+            for index in range(len(submission['answer']['parts'])):
+                submission['answer']['parts'][index]['track_changes'] = prompt_array[index]
+
+    return submission

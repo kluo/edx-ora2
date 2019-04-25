@@ -305,6 +305,7 @@ class SubmitAssessmentsMixin(object):
     def create_submission_and_assessments(
             self, xblock, submission_text, peers, peer_assessments, self_assessment,
             waiting_for_peer=False,
+            should_track_changes=False,
     ):
         """
         Create a submission and peer/self assessments, so that the user can receive a grade.
@@ -332,6 +333,13 @@ class SubmitAssessmentsMixin(object):
             # Create submissions and (optionally) assessments from other users
             must_be_graded_by = xblock.get_assessment_module('peer-assessment')['must_be_graded_by']
             scorer_subs = self.create_peer_submissions(student_item, peers, submission_text)
+
+            track_changes_edits = ''
+            if should_track_changes:
+                track_changes_edits = []
+                for sub_text in submission_text:
+                    track_changes_edits.append(sub_text + u'<span class="ins"> is wrong!</span>')
+
             if not waiting_for_peer:
                 for scorer_sub, scorer_name, assessment in zip(scorer_subs, peers, peer_assessments):
                     self.create_peer_assessment(
@@ -340,7 +348,8 @@ class SubmitAssessmentsMixin(object):
                         submission,
                         assessment,
                         xblock.rubric_criteria,
-                        must_be_graded_by
+                        must_be_graded_by,
+                        track_changes_edits=track_changes_edits,
                     )
 
             # Have our user make assessments (so she can get a score)
@@ -372,7 +381,7 @@ class SubmitAssessmentsMixin(object):
             workflow_api.create_workflow(scorer_sub['uuid'], self.STEPS)
         return returned_subs
 
-    def create_peer_assessment(self, scorer_sub, scorer, sub_to_assess, assessment, criteria, grading_requirements):
+    def create_peer_assessment(self, scorer_sub, scorer, sub_to_assess, assessment, criteria, grading_requirements, track_changes_edits=None):
         """Create a peer assessment of submission sub_to_assess by scorer."""
         peer_api.create_peer_workflow_item(scorer_sub['uuid'], sub_to_assess['uuid'])
         peer_api.create_assessment(
@@ -382,7 +391,8 @@ class SubmitAssessmentsMixin(object):
             assessment['criterion_feedback'],
             assessment['overall_feedback'],
             {'criteria': criteria},
-            grading_requirements
+            grading_requirements,
+            track_changes_edits=track_changes_edits,
         )
 
     def create_self_assessment(self, submission, student_id, assessment, criteria):

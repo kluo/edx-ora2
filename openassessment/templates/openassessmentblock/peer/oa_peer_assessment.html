@@ -62,7 +62,15 @@
     <div class="ui-slidable__content" aria-labelledby="oa_peer_{{ xblock_id }}" id="oa_peer{{ xblock_id }}_content">
         <div class="wrapper--step__content">
             <div class="step__instruction">
-                <p>{% trans "Read and assess the following response from one of your peers." %}</p>
+                <p>
+                    {% if track_changes %}
+                        {% blocktrans  with ins_start="<ins>" ins_end="</ins>" del_start="<del>" del_end="</del>" %}
+                            Read, edit and assess the following response from one of your peers. You can make {{ ins_start }}additions{{ ins_end }} and {{ del_start }}deletions{{ del_end }} to help improve the submission.
+                        {% endblocktrans %}
+                    {% else %}
+                        {% trans "Read and assess the following response from one of your peers." %}
+                    {% endif %}
+                </p>
             </div>
 
             <div class="step__content">
@@ -70,6 +78,15 @@
                     <li class="list--peer-assessments__item">
                         <article class="peer-assessment peer-assessment--001">
                             <div class="peer-assessment__display">
+                                <header class="peer-assessment__display__header">
+                                    <h3 class="peer-assessment__display__title">
+                                        {% with review_num_string=review_num|stringformat:"s" must_grade_string=must_grade|stringformat:"s" %}
+                                            {% blocktrans with review_number='<span class="peer-assessment__number--current">'|safe|add:review_num_string|add:'</span>'|safe num_must_grade='<span class="peer-assessment__number--required">'|safe|add:must_grade_string|add:'</span>'|safe %}
+                                                Assessment # {{ review_number }} of {{ num_must_grade }}
+                                            {% endblocktrans %}
+                                        {% endwith %}
+                                    </h3>
+                                </header>
 
                                 {% trans "Your peer's response to the prompt above" as translated_label %}
                                 {% include "openassessmentblock/oa_submission_answer.html" with answer=peer_submission.answer answer_text_label=translated_label %}

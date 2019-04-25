@@ -24,6 +24,7 @@ OpenAssessment.BaseView = function(runtime, element, server, data) {
     this.gradeView = new OpenAssessment.GradeView(this.element, this.server, this);
     this.leaderboardView = new OpenAssessment.LeaderboardView(this.element, this.server, this);
     this.messageView = new OpenAssessment.MessageView(this.element, this.server, this);
+    this.trackChangesView = new OpenAssessment.TrackChangesView(this.element, this.server, this);
     // Staff-only area with information and tools for managing student submissions
     this.staffAreaView = new OpenAssessment.StaffAreaView(this.element, this.server, this);
     this.usageID = '';
@@ -268,6 +269,20 @@ OpenAssessment.BaseView.prototype = {
      */
     loadMessageView: function() {
         this.messageView.load();
+    },
+
+    /**
+    Enable TrackChanges
+    **/
+    enableTrackChangesView: function() {
+        this.trackChangesView.enableTrackChanges();
+    },
+
+    /**
+    Display TrackChanges View
+    **/
+    displayTrackChangesView: function() {
+        this.trackChangesView.displayTrackChanges();
     },
 
     /**
